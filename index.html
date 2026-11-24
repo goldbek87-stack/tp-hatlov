@@ -131,7 +131,8 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
       <div><label>3. TP rusumi *</label><select id="i-r"></select></div>
     </div>
     <label>4. 0,4 kV chiqishlar soni *</label><select id="i-c"></select>
-    <label>5. Tarmoq *</label><select id="i-tm"></select>
+    <label>5. Tarmoq * <span style="font-weight:normal">(PST yoki fider nomini yozing)</span></label>
+    <input id="i-tm" list="tmList" placeholder="Masalan: shifo, kombinat, olmazor…" autocomplete="off"><datalist id="tmList"></datalist>
     <label>6. Mas'ul brigada (UB — master) *</label><select id="i-ub"></select>
     <label>7. MFY *</label><input id="i-mfy" list="mfyList" placeholder="Yozing yoki tanlang"><datalist id="mfyList"></datalist>
     <label>8. TP rasmlari (1 tadan 4 tagacha) *</label>
@@ -247,8 +248,7 @@ const fill = (el, arr, ph) => { el.innerHTML = (ph?`<option value="">${ph}</opti
 fill($("i-q"), QUVVAT, "— tanlang —");
 fill($("i-r"), RUSUM, "— tanlang —");
 fill($("i-c"), Array.from({length:16},(_,i)=>i+1), "— tanlang —");
-$("i-tm").innerHTML = `<option value="">— tarmoqni tanlang (${TARMOQ.length} ta) —</option>` +
-  Object.keys(PST).map(p=>`<optgroup label="${esc(p)}">`+TARMOQ.filter(t=>t[1]===p).map(t=>`<option value="${esc(t[0])}">${esc(t[0])}</option>`).join("")+`</optgroup>`).join("");
+$("tmList").innerHTML = TARMOQ.map(t=>`<option value="${esc(t[0])}">`).join("");
 fill($("i-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "— tanlang —");
 fill($("i-h"), HOLAT, "— tanlang —");
 fill($("i-b"), BALANS, "— tanlang —");
@@ -343,18 +343,19 @@ $("saveBtn").onclick = async () => {
   const n = $("i-n").value.trim();
   const loc = parseLoc($("i-loc").value);
   const mfy = $("i-mfy").value.trim();
+  const tm = TARMOQ.find(t=>t[0]===$("i-tm").value.trim());
   if (!n) return msg("TP raqamini kiriting");
   const id = editId || tpId(n);
   if (!editId && ITEMS[id]) return msg(`TP ${esc(n)} allaqachon kiritilgan! Ro'yxatdan topib tahrirlang.`);
-  for (const [f,t] of [["i-q","quvvat"],["i-r","rusum"],["i-c","0,4 kV chiqishlar soni"],["i-tm","tarmoq"],["i-ub","UB"],["i-h","holat"],["i-b","balans"]])
+  for (const [f,t] of [["i-q","quvvat"],["i-r","rusum"],["i-c","0,4 kV chiqishlar soni"],["i-ub","UB"],["i-h","holat"],["i-b","balans"]])
     if (!$(f).value) return msg(`${t} tanlanmagan`);
+  if (!tm) return msg("Tarmoqni ro'yxatdan tanlang (yozing va chiqqan variantni bosing)");
   if (!MFY.includes(mfy)) return msg("MFY ni ro'yxatdan tanlang");
   if (!photos.length) return msg("Kamida 1 ta rasm qo'shing");
   if (!loc) return msg("Lokatsiya noto'g'ri — GPS tugmasini bosing yoki Google Maps koordinatasini qo'ying");
   const {lat, lng} = loc;
 
   const ub = UB.find(u=>u.ub===$("i-ub").value);
-  const tm = TARMOQ.find(t=>t[0]===$("i-tm").value);
   const rec = { n, q:+$("i-q").value, r:$("i-r").value, c:+$("i-c").value, tm:tm[0], p:tm[1], f:tm[2],
                 ub:ub.ub, m:ub.m, mfy, h:$("i-h").value, b:$("i-b").value, lat, lng, pc:photos.length,
                 by: auth.currentUser.email, t: Date.now() };
