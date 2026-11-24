@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Davlatobod HET — TP hatlov</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#1c2430;--mut:#6b7686;--line:#e2e6ec;--pri:#1565c0;--ok:#2e7d32;--mid:#f9a825;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:var(--pri);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:1000}
+header h1{font-size:16px;margin:0;flex:1}
+header small{opacity:.85;font-size:12px}
+nav{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:44px;z-index:999}
+nav button{flex:1;border:0;background:none;padding:12px 4px;font-size:14px;color:var(--mut);border-bottom:3px solid transparent;cursor:pointer}
+nav button.on{color:var(--pri);border-color:var(--pri);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi b{display:block;font-size:26px;margin-top:4px}
+.kpi span{color:var(--mut);font-size:13px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--pri)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--mut);font-weight:600;font-size:13px}
+td.n,th.n{text-align:right}
+tr.click{cursor:pointer}tr.click:hover{background:#f6f9ff}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;background:var(--pri);color:#fff;padding:11px 16px;border-radius:8px;font-size:15px;cursor:pointer}
+.btn.sec{background:#e8eef7;color:var(--pri)}
+.btn.del{background:#fdecec;color:var(--bad)}
+.btn:disabled{opacity:.5}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.h-yaxshi{background:var(--ok)}.h-orta{background:var(--mid)}.h-yomon{background:var(--bad)}
+#map{height:calc(100vh - 140px);min-height:380px;border-radius:10px}
+.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.ph{position:relative;aspect-ratio:1;border:1px dashed #b8c2d0;border-radius:8px;overflow:hidden;background:#fafbfc;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:28px;cursor:pointer}
+.ph img{width:100%;height:100%;object-fit:cover}
+.ph .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer}
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 10px}
+.modal.on{display:flex}
+.modal .card{max-width:640px;width:100%}
+.pass td:first-child{color:var(--mut);width:45%}
+.pass-photos{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.pass-photos img{width:100%;border-radius:8px;cursor:zoom-in}
+.hide{display:none!important}
+.msg{padding:10px;border-radius:8px;margin-top:10px;font-size:14px}
+.msg.err{background:#fdecec;color:var(--bad)}.msg.ok{background:#e8f5e9;color:var(--ok)}
+.login{max-width:380px;margin:60px auto}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.legend{display:flex;gap:14px;font-size:13px;margin:6px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Davlatobod HET — TP hatlov<br><small id="who"></small></h1>
+  <button class="btn sec hide" id="outBtn" style="padding:6px 10px;font-size:13px">Chiqish</button>
+</header>
+
+<!-- LOGIN -->
+<section id="loginBox" class="login card hide">
+  <h3 style="margin-top:0">Tizimga kirish</h3>
+  <label>Email</label><input id="lEmail" type="email" autocomplete="username">
+  <label>Parol</label><input id="lPass" type="password" autocomplete="current-password">
+  <br><br><button class="btn" id="lBtn" style="width:100%">Kirish</button>
+  <div id="lMsg"></div>
+</section>
+
+<div id="app" class="hide">
+<nav>
+  <button data-t="kpi" class="on">📊 KPI</button>
+  <button data-t="map">🗺 Xarita</button>
+  <button data-t="list">📋 Ro'yxat</button>
+  <button data-t="add">➕ Qo'shish</button>
+</nav>
+<main>
+
+<!-- KPI -->
+<section id="t-kpi">
+  <div class="kpis">
+    <div class="kpi"><span>Hatlovdan o'tgan TP</span><b id="k-jami">0</b><div class="bar"><i id="k-bar" style="width:0"></i></div><span id="k-foiz"></span></div>
+    <div class="kpi"><span><i class="dot h-yaxshi"></i>Yaxshi</span><b id="k-yaxshi">0</b></div>
+    <div class="kpi"><span><i class="dot h-orta"></i>O'rta</span><b id="k-orta">0</b></div>
+    <div class="kpi"><span><i class="dot h-yomon"></i>Yomon</span><b id="k-yomon">0</b></div>
+    <div class="kpi"><span>Elektroset balansida</span><b id="k-el">0</b></div>
+    <div class="kpi"><span>Iste'molchi balansida</span><b id="k-ist">0</b></div>
+    <div class="kpi"><span>Jami quvvat, kVA</span><b id="k-kva">0</b></div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3 style="margin-top:0">UB bo'yicha</h3><table id="k-ub"></table></div>
+  <div class="card"><h3 style="margin-top:0">Podstansiya bo'yicha</h3><table id="k-pst"></table></div>
+</section>
+
+<!-- MAP -->
+<section id="t-map" class="hide">
+  <div class="legend"><span><i class="dot h-yaxshi"></i>Yaxshi</span><span><i class="dot h-orta"></i>O'rta</span><span><i class="dot h-yomon"></i>Yomon</span></div>
+  <div id="map"></div>
+</section>
+
+<!-- LIST -->
+<section id="t-list" class="hide">
+  <div class="card">
+    <div class="filters">
+      <input id="f-q" placeholder="🔍 TP raqami">
+      <select id="f-pst"></select>
+      <select id="f-ub"></select>
+      <select id="f-mfy"></select>
+      <select id="f-h"></select>
+      <select id="f-b"></select>
+    </div>
+    <div class="tools"><span id="f-count" style="flex:1;color:var(--mut)"></span><button class="btn sec" id="xlsBtn">⬇ Excel</button></div>
+    <div style="overflow-x:auto"><table id="listTbl"></table></div>
+  </div>
+</section>
+
+<!-- ADD / EDIT -->
+<section id="t-add" class="hide">
+  <div class="card">
+    <h3 style="margin-top:0" id="formTitle">Yangi TP qo'shish</h3>
+    <label>1. TP raqami *</label><input id="i-n" placeholder="Masalan: 594">
+    <div class="row">
+      <div><label>2. TP quvvati, kVA *</label><select id="i-q"></select></div>
+      <div><label>3. TP rusumi *</label><select id="i-r"></select></div>
+    </div>
+    <label>4. 0,4 kV chiqishlar soni *</label><select id="i-c"></select>
+    <div class="row">
+      <div><label>5. Podstansiya *</label><select id="i-p"></select></div>
+      <div><label>Fider *</label><select id="i-f"></select></div>
+    </div>
+    <label>6. Mas'ul brigada (UB — master) *</label><select id="i-ub"></select>
+    <label>7. MFY *</label><input id="i-mfy" list="mfyList" placeholder="Yozing yoki tanlang"><datalist id="mfyList"></datalist>
+    <label>8. TP rasmlari (1 tadan 4 tagacha) *</label>
+    <div class="photos" id="phBox"></div>
+    <input type="file" id="phFile" accept="image/*" class="hide">
+    <div class="row">
+      <div><label>9. TP holati *</label><select id="i-h"></select></div>
+      <div><label>11. Balans *</label><select id="i-b"></select></div>
+    </div>
+    <label>10. TP lokatsiyasi *</label>
+    <div class="row"><input id="i-lat" placeholder="Kenglik (lat)" inputmode="decimal"><input id="i-lng" placeholder="Uzunlik (lng)" inputmode="decimal"></div>
+    <button class="btn sec" id="gpsBtn" style="margin-top:8px;width:100%">📍 Joylashuvni olish (GPS)</button>
+    <br><br>
+    <div class="row"><button class="btn" id="saveBtn">💾 Saqlash</button><button class="btn sec" id="resetBtn">Tozalash</button></div>
+    <div id="fMsg"></div>
+  </div>
+</section>
+</main>
+</div>
+
+<!-- PASSPORT -->
+<div class="modal" id="pModal"><div class="card">
+  <div style="display:flex;align-items:center"><h3 style="margin:0;flex:1" id="pTitle"></h3><button class="btn sec" id="pClose">✕</button></div>
+  <table class="pass" id="pTbl" style="margin-top:10px"></table>
+  <div class="pass-photos" id="pPhotos">Rasmlar yuklanmoqda…</div>
+  <br><div class="row"><button class="btn sec" id="pEdit">✏️ Tahrirlash</button><button class="btn del" id="pDel">🗑 O'chirish</button></div>
+</div></div>
+
+<script type="module">
+// =====================================================================
+// 1) FIREBASE KONFIGURATSIYASI — shu yerga o'z firebaseConfig'ingizni qo'ying
+// =====================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDWobceAreVmyL7Ol4G2KYh69WbQNIS1nI",
+  authDomain: "transformator-1986e.firebaseapp.com",
+  projectId: "transformator-1986e",
+  storageBucket: "transformator-1986e.firebasestorage.app",
+  messagingSenderId: "254028955360",
+  appId: "1:254028955360:web:95029d2413763cef681a85"
+};
+
+// =====================================================================
+// 2) RO'YXATLAR
+// =====================================================================
+const REJA = 1200; // tumandagi jami TP soni (KPI foizi uchun)
+const QUVVAT = [25,63,100,160,250,400,630,1000,1200];
+const RUSUM = ["GKTP","SKTP","MKTP","K-42"];
+const UB = [
+  {ub:"1-UB", m:"J. Raxmatullayev"},
+  {ub:"2-UB", m:"H. Malikov"},
+  {ub:"3-UB", m:"Y. Shamsiddinov"},
+  {ub:"4-UB", m:"N. Yunusboyev"}
+];
+const HOLAT = [{v:"yaxshi",t:"Yaxshi",c:"#2e7d32"},{v:"orta",t:"O'rta",c:"#f9a825"},{v:"yomon",t:"Yomon",c:"#c62828"}];
+const BALANS = [{v:"elektroset",t:"Elektroset"},{v:"istemolchi",t:"Iste'molchi"}];
+const MFY = ["Yuksalish","Orzu","Elxon","Nurobod","Gulshan","Navro'z","Ijodkor","Tadbirkor","Gulobod","Irvalon","Yuqori Rovuston","O'rta Rovuston","Quyi Rovuston","To'quvchi","Umid","Yangi Tong","Xalqlar Do'stligi","Mustaqillik","Navbahor","Porloq","Istiqlol","Yuqori Girvon","O'rta Girvon","Quyi Girvon","Elobod","Shishaki","Bog'","Davlatobod","Yangiobod","Zarafshon","Dashtbog'","Mehribonlik"];
+const PST = {"Mustaqillik (110/6 kV)": ["Shifosuv", "Aloqachi", "G'alaba", "Bog'ishamol", "Nasos T-1", "Vodakanal T-1", "Zarkent", "Yandama", "Turkiston", "Obod", "Vodokanal T-2", "Nasos T-2"], "Olmazor (110/35/6 kV)": ["Yangihayot", "Shifokor", "Mashal", "Kabullar uyi-1", "Farovon", "Kabullar uyi-2", "Navbahor", "Oliygoh", "1-Massiv", "Suvoqava", "Taraqqiyot Metan", "Bank", "Aeroport", "Iftixor", "Yuksalish", "Artsof"], "Nurabod (110/6 kV)": ["Navruz", "Mashal"], "Transformator (110/10 kV)": ["Shishaki", "Mustaxkam Metan", "Kartofel-1", "Serva-1", "Raketa -1", "Irvadon", "Tarnaya-2", "Doz-2", "Serva-2"], "Oliygoh (35/6 kV)": ["Registon", "MK-11", "Kamolot", "Sport kollej", "KTP-594", "Tuquvchi", "Shpris", "Arma"], "G'arbiy (35/6 kV)": ["Mustaqillik", "To'quvchi", "Avtosaltanat", "Diyonat", "Al-Mashriq", "Iftixor"], "Davlatobod (35/6 kV)": ["Yangitong", "Roxat", "Temur", "6-Massiv", "Nurchi", "Olmos", "Tadbirkor gaz", "Bog'shomolobod", "Ifoda"], "Ibrat (110/6 kV)": ["Yuksalish", "Orzu", "Yoshlar", "Sardor metal", "Glaz ekspo", "Nasos", "Samira", "Nodir metal"], "Tegirmon (110/6 kV)": ["Sanoat", "Soxibkor", "Obod-2", "Yangiyo'l", "Metal-2"], "Vokzal (110/6 kV)": ["Aziz-94", "G'irvon", "Axsi", "Vokzal"], "Parrandachi (110/10 kV)": ["Parranda-3", "Parranda-2 T-1", "Bunyodkor", "Asn metal", "Ko'rkam", "Radioleneniya", "Ittifoq", "Parranda-2 T-2", "Suyuq gaz", "Davr metal"], "Kombinat (110/6 kV)": ["Mehmonxona", "28 Yacheyka gaz", "14 Yacheyka Aisha", "26 Yacheyka Uz chasis", "6 Yacheyka Nam qog'oz", "19 Yacheyka", "8 Yacheyka", "53 Yacheyka", "33 Yacheyka", "47 Yacheyka Uz chasis", "51 Yacheyka Aeroport"]}
+;
+const MAX_FOTO = 4, MAX_FOTO_BYTES = 115000; // bitta rasm ~115 KB gacha siqiladi
+
+// =====================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, onSnapshot, writeBatch, deleteField, FieldPath, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const metaRef = doc(db, "meta", "tplar"); // barcha TP qisqacha — 1 ta o'qish
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hT = v => (HOLAT.find(h=>h.v===v)||{}).t || v;
+const bT = v => (BALANS.find(h=>h.v===v)||{}).t || v;
+const tpId = n => String(n).trim().toUpperCase().replace(/[^0-9A-ZА-ЯЁЎҚҒҲ-]+/gi,"_");
+
+let ITEMS = {};      // id -> qisqa ma'lumot
+let editId = null;   // tahrirlanayotgan TP
+let photos = [];     // dataURL lar
+let unsub = null;
+
+// ---------- AUTH ----------
+onAuthStateChanged(auth, u => {
+  $("loginBox").classList.toggle("hide", !!u);
+  $("app").classList.toggle("hide", !u);
+  $("outBtn").classList.toggle("hide", !u);
+  $("who").textContent = u ? u.email : "";
+  if (u && !unsub) unsub = onSnapshot(metaRef, s => { ITEMS = (s.exists() && s.data().items) || {}; renderAll(); },
+                                      e => alert("Bazaga ulanishda xato: " + e.message));
+  if (!u && unsub) { unsub(); unsub = null; }
+});
+$("lBtn").onclick = async () => {
+  $("lMsg").innerHTML = "";
+  try { await signInWithEmailAndPassword(auth, $("lEmail").value.trim(), $("lPass").value); }
+  catch (e) { $("lMsg").innerHTML = `<div class="msg err">Email yoki parol noto'g'ri</div>`; }
+};
+$("lPass").onkeydown = e => { if (e.key === "Enter") $("lBtn").click(); };
+$("outBtn").onclick = () => signOut(auth);
+
+// ---------- TABS ----------
+let map, layer;
+function tab(t){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.t===t));
+  ["kpi","map","list","add"].forEach(x=>$("t-"+x).classList.toggle("hide", x!==t));
+  if (t==="map") { initMap(); setTimeout(()=>map.invalidateSize(),50); }
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ if(b.dataset.t==="add" && !editId) resetForm(); tab(b.dataset.t); });
+
+// ---------- SELECT TO'LDIRISH ----------
+const fill = (el, arr, ph) => { el.innerHTML = (ph?`<option value="">${ph}</option>`:"") + arr.map(o=>typeof o==="object"?`<option value="${esc(o.v)}">${esc(o.t)}</option>`:`<option value="${esc(o)}">${esc(o)}</option>`).join(""); };
+fill($("i-q"), QUVVAT, "— tanlang —");
+fill($("i-r"), RUSUM, "— tanlang —");
+fill($("i-c"), Array.from({length:16},(_,i)=>i+1), "— tanlang —");
+fill($("i-p"), Object.keys(PST), "— podstansiya —");
+fill($("i-f"), [], "— avval PST tanlang —");
+fill($("i-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "— tanlang —");
+fill($("i-h"), HOLAT, "— tanlang —");
+fill($("i-b"), BALANS, "— tanlang —");
+$("mfyList").innerHTML = MFY.map(m=>`<option value="${esc(m)}">`).join("");
+$("i-p").onchange = () => fill($("i-f"), PST[$("i-p").value]||[], $("i-p").value ? "— fider —" : "— avval PST tanlang —");
+
+fill($("f-pst"), Object.keys(PST), "Barcha PST");
+fill($("f-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "Barcha UB");
+fill($("f-mfy"), MFY, "Barcha MFY");
+fill($("f-h"), HOLAT, "Barcha holat");
+fill($("f-b"), BALANS, "Barcha balans");
+["f-q","f-pst","f-ub","f-mfy","f-h","f-b"].forEach(id=>$(id).oninput=renderList);
+
+// ---------- RASMLAR ----------
+function renderPhotos(){
+  let h = photos.map((p,i)=>`<div class="ph"><img src="${p}"><button class="x" data-i="${i}">✕</button></div>`).join("");
+  if (photos.length < MAX_FOTO) h += `<div class="ph" id="phAdd">📷</div>`;
+  $("phBox").innerHTML = h;
+  $("phBox").querySelectorAll(".x").forEach(b=>b.onclick=e=>{e.stopPropagation(); photos.splice(+b.dataset.i,1); renderPhotos();});
+  const a = $("phAdd"); if (a) a.onclick = () => $("phFile").click();
+}
+$("phFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { photos.push(await compress(f)); renderPhotos(); }
+  catch { alert("Rasmni o'qib bo'lmadi"); }
+};
+function compress(file){
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let max = 1000, q = 0.6, out;
+      const cv = document.createElement("canvas"), cx = cv.getContext("2d");
+      do {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+        cx.drawImage(img, 0, 0, cv.width, cv.height);
+        out = cv.toDataURL("image/jpeg", q);
+        if (q > 0.35) q -= 0.1; else max = Math.round(max*0.8);
+      } while (out.length > MAX_FOTO_BYTES && max > 300);
+      res(out);
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+
+// ---------- GPS ----------
+$("gpsBtn").onclick = () => {
+  if (!navigator.geolocation) return alert("Bu qurilmada GPS yo'q");
+  $("gpsBtn").disabled = true; $("gpsBtn").textContent = "📍 Aniqlanmoqda…";
+  navigator.geolocation.getCurrentPosition(p => {
+    $("i-lat").value = p.coords.latitude.toFixed(6); $("i-lng").value = p.coords.longitude.toFixed(6);
+    $("gpsBtn").disabled = false; $("gpsBtn").textContent = `📍 Olindi (aniqlik ±${Math.round(p.coords.accuracy)} m) — qayta olish`;
+  }, err => {
+    $("gpsBtn").disabled = false; $("gpsBtn").textContent = "📍 Joylashuvni olish (GPS)";
+    alert("GPS olinmadi: telefon sozlamalarida joylashuvga ruxsat bering. (" + err.message + ")");
+  }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
+};
+
+// ---------- SAQLASH ----------
+function resetForm(){
+  editId = null; photos = [];
+  ["i-n","i-q","i-r","i-c","i-p","i-ub","i-mfy","i-h","i-b","i-lat","i-lng"].forEach(id=>$(id).value="");
+  $("i-p").onchange(); $("i-n").disabled = false;
+  $("formTitle").textContent = "Yangi TP qo'shish"; $("fMsg").innerHTML = "";
+  $("gpsBtn").textContent = "📍 Joylashuvni olish (GPS)";
+  renderPhotos();
+}
+$("resetBtn").onclick = resetForm;
+
+$("saveBtn").onclick = async () => {
+  const msg = t => $("fMsg").innerHTML = `<div class="msg err">${t}</div>`;
+  const n = $("i-n").value.trim();
+  const lat = parseFloat($("i-lat").value.replace(",", ".")), lng = parseFloat($("i-lng").value.replace(",", "."));
+  const mfy = $("i-mfy").value.trim();
+  if (!n) return msg("TP raqamini kiriting");
+  const id = editId || tpId(n);
+  if (!editId && ITEMS[id]) return msg(`TP ${esc(n)} allaqachon kiritilgan! Ro'yxatdan topib tahrirlang.`);
+  for (const [f,t] of [["i-q","quvvat"],["i-r","rusum"],["i-c","0,4 kV chiqishlar soni"],["i-p","podstansiya"],["i-f","fider"],["i-ub","UB"],["i-h","holat"],["i-b","balans"]])
+    if (!$(f).value) return msg(`${t} tanlanmagan`);
+  if (!MFY.includes(mfy)) return msg("MFY ni ro'yxatdan tanlang");
+  if (!photos.length) return msg("Kamida 1 ta rasm qo'shing");
+  if (isNaN(lat) || isNaN(lng) || lat<37 || lat>46 || lng<55 || lng>74) return msg("Lokatsiya noto'g'ri — GPS tugmasini bosing");
+
+  const ub = UB.find(u=>u.ub===$("i-ub").value);
+  const rec = { n, q:+$("i-q").value, r:$("i-r").value, c:+$("i-c").value, p:$("i-p").value, f:$("i-f").value,
+                ub:ub.ub, m:ub.m, mfy, h:$("i-h").value, b:$("i-b").value, lat, lng, pc:photos.length,
+                by: auth.currentUser.email, t: Date.now() };
+  if (editId && ITEMS[editId]) { rec.cby = ITEMS[editId].cby || ITEMS[editId].by; rec.ct = ITEMS[editId].ct || ITEMS[editId].t; }
+  else { rec.cby = rec.by; rec.ct = rec.t; }
+
+  $("saveBtn").disabled = true; $("saveBtn").textContent = "Saqlanmoqda…";
+  try {
+    const b = writeBatch(db);
+    b.set(doc(db,"tp",id), {...rec, updated: serverTimestamp()});
+    b.set(doc(db,"rasm",id), {photos});
+    b.set(metaRef, {items:{[id]:rec}}, {merge:true});
+    await b.commit();
+    const wasEdit = !!editId;
+    resetForm();
+    $("fMsg").innerHTML = `<div class="msg ok">✅ TP ${esc(n)} ${wasEdit?"yangilandi":"saqlandi"}</div>`;
+  } catch (e) { msg("Saqlashda xato: " + esc(e.message)); }
+  $("saveBtn").disabled = false; $("saveBtn").textContent = "💾 Saqlash";
+};
+
+// ---------- KPI ----------
+function renderKPI(){
+  const a = Object.values(ITEMS), cnt = f => a.filter(f).length;
+  $("k-jami").textContent = a.length;
+  const pr = Math.min(100, a.length/REJA*100);
+  $("k-bar").style.width = pr+"%"; $("k-foiz").textContent = `${pr.toFixed(1)}% (reja: ${REJA})`;
+  $("k-yaxshi").textContent = cnt(x=>x.h==="yaxshi");
+  $("k-orta").textContent = cnt(x=>x.h==="orta");
+  $("k-yomon").textContent = cnt(x=>x.h==="yomon");
+  $("k-el").textContent = cnt(x=>x.b==="elektroset");
+  $("k-ist").textContent = cnt(x=>x.b==="istemolchi");
+  $("k-kva").textContent = a.reduce((s,x)=>s+(x.q||0),0).toLocaleString("ru");
+  const grp = (keys, key, label) => `<tr><th>${label}</th><th class="n">Jami</th><th class="n">🟢</th><th class="n">🟡</th><th class="n">🔴</th></tr>` +
+    keys.map(([k,t])=>{ const g=a.filter(x=>x[key]===k); return `<tr><td>${esc(t)}</td><td class="n"><b>${g.length}</b></td><td class="n">${g.filter(x=>x.h==="yaxshi").length}</td><td class="n">${g.filter(x=>x.h==="orta").length}</td><td class="n">${g.filter(x=>x.h==="yomon").length}</td></tr>`; }).join("");
+  $("k-ub").innerHTML = grp(UB.map(u=>[u.ub,`${u.ub} — ${u.m}`]), "ub", "UB / master");
+  $("k-pst").innerHTML = grp(Object.keys(PST).map(p=>[p,p]), "p", "Podstansiya");
+}
+
+// ---------- XARITA ----------
+function initMap(){
+  if (map) return;
+  map = L.map("map").setView([40.995, 71.62], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  renderMap(true);
+}
+function renderMap(fit){
+  if (!map) return;
+  layer.clearLayers();
+  const pts = [];
+  for (const [id,x] of Object.entries(ITEMS)) {
+    if (x.lat==null) continue;
+    const c = (HOLAT.find(h=>h.v===x.h)||{c:"#888"}).c;
+    L.circleMarker([x.lat,x.lng], {radius:8, color:"#fff", weight:2, fillColor:c, fillOpacity:.95})
+      .bindTooltip(`TP ${esc(x.n)} · ${x.q} kVA`).on("click",()=>openPass(id)).addTo(layer);
+    pts.push([x.lat,x.lng]);
+  }
+  if (fit && pts.length) map.fitBounds(pts, {padding:[30,30], maxZoom:16});
+}
+
+// ---------- RO'YXAT ----------
+let FILTERED = [];
+function renderList(){
+  const q = $("f-q").value.trim().toLowerCase(), v = id => $(id).value;
+  FILTERED = Object.entries(ITEMS).filter(([id,x]) =>
+    (!q || String(x.n).toLowerCase().includes(q)) && (!v("f-pst")||x.p===v("f-pst")) && (!v("f-ub")||x.ub===v("f-ub")) &&
+    (!v("f-mfy")||x.mfy===v("f-mfy")) && (!v("f-h")||x.h===v("f-h")) && (!v("f-b")||x.b===v("f-b"))
+  ).sort((a,b)=>String(a[1].n).localeCompare(String(b[1].n), undefined, {numeric:true}));
+  $("f-count").textContent = `Topildi: ${FILTERED.length} ta`;
+  $("listTbl").innerHTML = `<tr><th>TP</th><th class="n">kVA</th><th>Rusum</th><th>PST / Fider</th><th>UB</th><th>MFY</th><th>Holat</th></tr>` +
+    FILTERED.map(([id,x])=>`<tr class="click" data-id="${esc(id)}"><td><b>${esc(x.n)}</b></td><td class="n">${x.q}</td><td>${esc(x.r)}</td><td>${esc(x.p.split(" (")[0])} / ${esc(x.f)}</td><td>${esc(x.ub)}</td><td>${esc(x.mfy)}</td><td><i class="dot h-${x.h}"></i>${hT(x.h)}</td></tr>`).join("");
+  $("listTbl").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openPass(r.dataset.id));
+}
+$("xlsBtn").onclick = () => {
+  const rows = FILTERED.map(([id,x],i)=>({"№":i+1,"TP raqami":x.n,"Quvvati, kVA":x.q,"Rusumi":x.r,"0,4 kV chiqishlar":x.c,
+    "Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(x.h),"Balans":bT(x.b),
+    "Kenglik":x.lat,"Uzunlik":x.lng,"Rasmlar soni":x.pc,"Kiritgan":x.cby||x.by,"Oxirgi o'zgartirish":new Date(x.t).toLocaleString("ru")}));
+  const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
+  ws["!cols"] = [5,10,8,8,8,26,20,7,18,18,9,12,11,11,8,24,18].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, "TP hatlov");
+  XLSX.writeFile(wb, `TP_hatlov_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+
+// ---------- PASPORT ----------
+let passId = null;
+async function openPass(id){
+  const x = ITEMS[id]; if (!x) return; passId = id;
+  $("pTitle").innerHTML = `<i class="dot h-${x.h}"></i>TP ${esc(x.n)}`;
+  const rows = [["Quvvati",x.q+" kVA"],["Rusumi",x.r],["0,4 kV chiqishlar soni",x.c],["Podstansiya",x.p],["Fider",x.f],
+    ["Mas'ul brigada",`${x.ub} — ${x.m}`],["MFY",x.mfy],["Holati",hT(x.h)],["Balans",bT(x.b)],
+    ["Lokatsiya",`<a target="_blank" href="https://maps.google.com/?q=${x.lat},${x.lng}">${x.lat}, ${x.lng}</a>`],
+    ["Kiritgan",esc(x.cby||x.by)],["Oxirgi o'zgartirish",`${new Date(x.t).toLocaleString("ru")} (${esc(x.by)})`]];
+  $("pTbl").innerHTML = rows.map(([a,b])=>`<tr><td>${a}</td><td>${a==="Lokatsiya"||a==="Kiritgan"||a.startsWith("Oxirgi")?b:esc(b)}</td></tr>`).join("");
+  $("pPhotos").textContent = "Rasmlar yuklanmoqda…";
+  $("pModal").classList.add("on");
+  try {
+    const s = await getDoc(doc(db,"rasm",id));
+    const ph = (s.exists() && s.data().photos) || [];
+    if (passId !== id) return;
+    $("pPhotos").innerHTML = ph.length ? ph.map(p=>`<img src="${p}">`).join("") : "Rasm yo'q";
+    $("pPhotos").querySelectorAll("img").forEach(im=>im.onclick=()=>{ const w=window.open(); w.document.write(`<img src="${im.src}" style="max-width:100%">`); });
+    $("pModal").dataset.photos = JSON.stringify(ph);
+  } catch(e) { $("pPhotos").textContent = "Rasmlarni yuklab bo'lmadi: " + e.message; }
+}
+$("pClose").onclick = () => { $("pModal").classList.remove("on"); passId = null; };
+$("pModal").onclick = e => { if (e.target.id==="pModal") $("pClose").click(); };
+$("pEdit").onclick = () => {
+  const id = passId, x = ITEMS[id]; if (!x) return;
+  resetForm(); editId = id;
+  $("i-n").value = x.n; $("i-n").disabled = true;
+  $("i-q").value = x.q; $("i-r").value = x.r; $("i-c").value = x.c;
+  $("i-p").value = x.p; $("i-p").onchange(); $("i-f").value = x.f;
+  $("i-ub").value = x.ub; $("i-mfy").value = x.mfy; $("i-h").value = x.h; $("i-b").value = x.b;
+  $("i-lat").value = x.lat; $("i-lng").value = x.lng;
+  try { photos = JSON.parse($("pModal").dataset.photos || "[]"); } catch { photos = []; }
+  renderPhotos();
+  $("formTitle").textContent = `TP ${x.n} — tahrirlash`;
+  $("pClose").click(); tab("add");
+};
+$("pDel").onclick = async () => {
+  const id = passId, x = ITEMS[id]; if (!x) return;
+  if (prompt(`TP ${x.n} butunlay o'chiriladi. Tasdiqlash uchun TP raqamini yozing:`) !== String(x.n)) return;
+  try {
+    const b = writeBatch(db);
+    b.delete(doc(db,"tp",id)); b.delete(doc(db,"rasm",id));
+    b.update(metaRef, new FieldPath("items", id), deleteField());
+    await b.commit(); $("pClose").click();
+  } catch(e) { alert("O'chirishda xato: " + e.message); }
+};
+
+function renderAll(){ renderKPI(); renderList(); renderMap(false); }
+renderPhotos();
+</script>
+</body>
+</html>
