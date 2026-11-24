@@ -40,7 +40,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .h-yaxshi{background:var(--ok)}.h-orta{background:var(--mid)}.h-yomon{background:var(--bad)}
 #map{height:calc(100vh - 140px);min-height:380px;border-radius:10px}
-.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.photos{display:grid;grid-template-columns:repeat(4,minmax(0,120px));gap:8px;margin-top:6px}
 .ph{position:relative;aspect-ratio:1;border:1px dashed #b8c2d0;border-radius:8px;overflow:hidden;background:#fafbfc;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:28px;cursor:pointer}
 .ph img{width:100%;height:100%;object-fit:cover}
 .ph .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer}
@@ -131,10 +131,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
       <div><label>3. TP rusumi *</label><select id="i-r"></select></div>
     </div>
     <label>4. 0,4 kV chiqishlar soni *</label><select id="i-c"></select>
-    <div class="row">
-      <div><label>5. Podstansiya *</label><select id="i-p"></select></div>
-      <div><label>Fider *</label><select id="i-f"></select></div>
-    </div>
+    <label>5. Tarmoq *</label><select id="i-tm"></select>
     <label>6. Mas'ul brigada (UB — master) *</label><select id="i-ub"></select>
     <label>7. MFY *</label><input id="i-mfy" list="mfyList" placeholder="Yozing yoki tanlang"><datalist id="mfyList"></datalist>
     <label>8. TP rasmlari (1 tadan 4 tagacha) *</label>
@@ -145,7 +142,8 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
       <div><label>11. Balans *</label><select id="i-b"></select></div>
     </div>
     <label>10. TP lokatsiyasi *</label>
-    <div class="row"><input id="i-lat" placeholder="Kenglik (lat)" inputmode="decimal"><input id="i-lng" placeholder="Uzunlik (lng)" inputmode="decimal"></div>
+    <input id="i-loc" placeholder="Google Maps'dan nusxa: 40.998123, 71.612345">
+    <div id="locInfo" style="font-size:13px;margin-top:4px;color:var(--mut)"></div>
     <button class="btn sec" id="gpsBtn" style="margin-top:8px;width:100%">📍 Joylashuvni olish (GPS)</button>
     <br><br>
     <div class="row"><button class="btn" id="saveBtn">💾 Saqlash</button><button class="btn sec" id="resetBtn">Tozalash</button></div>
@@ -191,8 +189,8 @@ const UB = [
 const HOLAT = [{v:"yaxshi",t:"Yaxshi",c:"#2e7d32"},{v:"orta",t:"O'rta",c:"#f9a825"},{v:"yomon",t:"Yomon",c:"#c62828"}];
 const BALANS = [{v:"elektroset",t:"Elektroset"},{v:"istemolchi",t:"Iste'molchi"}];
 const MFY = ["Yuksalish","Orzu","Elxon","Nurobod","Gulshan","Navro'z","Ijodkor","Tadbirkor","Gulobod","Irvalon","Yuqori Rovuston","O'rta Rovuston","Quyi Rovuston","To'quvchi","Umid","Yangi Tong","Xalqlar Do'stligi","Mustaqillik","Navbahor","Porloq","Istiqlol","Yuqori Girvon","O'rta Girvon","Quyi Girvon","Elobod","Shishaki","Bog'","Davlatobod","Yangiobod","Zarafshon","Dashtbog'","Mehribonlik"];
-const PST = {"Mustaqillik (110/6 kV)": ["Shifosuv", "Aloqachi", "G'alaba", "Bog'ishamol", "Nasos T-1", "Vodakanal T-1", "Zarkent", "Yandama", "Turkiston", "Obod", "Vodokanal T-2", "Nasos T-2"], "Olmazor (110/35/6 kV)": ["Yangihayot", "Shifokor", "Mashal", "Kabullar uyi-1", "Farovon", "Kabullar uyi-2", "Navbahor", "Oliygoh", "1-Massiv", "Suvoqava", "Taraqqiyot Metan", "Bank", "Aeroport", "Iftixor", "Yuksalish", "Artsof"], "Nurabod (110/6 kV)": ["Navruz", "Mashal"], "Transformator (110/10 kV)": ["Shishaki", "Mustaxkam Metan", "Kartofel-1", "Serva-1", "Raketa -1", "Irvadon", "Tarnaya-2", "Doz-2", "Serva-2"], "Oliygoh (35/6 kV)": ["Registon", "MK-11", "Kamolot", "Sport kollej", "KTP-594", "Tuquvchi", "Shpris", "Arma"], "G'arbiy (35/6 kV)": ["Mustaqillik", "To'quvchi", "Avtosaltanat", "Diyonat", "Al-Mashriq", "Iftixor"], "Davlatobod (35/6 kV)": ["Yangitong", "Roxat", "Temur", "6-Massiv", "Nurchi", "Olmos", "Tadbirkor gaz", "Bog'shomolobod", "Ifoda"], "Ibrat (110/6 kV)": ["Yuksalish", "Orzu", "Yoshlar", "Sardor metal", "Glaz ekspo", "Nasos", "Samira", "Nodir metal"], "Tegirmon (110/6 kV)": ["Sanoat", "Soxibkor", "Obod-2", "Yangiyo'l", "Metal-2"], "Vokzal (110/6 kV)": ["Aziz-94", "G'irvon", "Axsi", "Vokzal"], "Parrandachi (110/10 kV)": ["Parranda-3", "Parranda-2 T-1", "Bunyodkor", "Asn metal", "Ko'rkam", "Radioleneniya", "Ittifoq", "Parranda-2 T-2", "Suyuq gaz", "Davr metal"], "Kombinat (110/6 kV)": ["Mehmonxona", "28 Yacheyka gaz", "14 Yacheyka Aisha", "26 Yacheyka Uz chasis", "6 Yacheyka Nam qog'oz", "19 Yacheyka", "8 Yacheyka", "53 Yacheyka", "33 Yacheyka", "47 Yacheyka Uz chasis", "51 Yacheyka Aeroport"]}
-;
+const TARMOQ = [["P/ST 110/6 kV Mustaqillik Shifosuv", "Mustaqillik (110/6 kV)", "Shifosuv"], ["P/ST 110/6 kV Mustaqillik Aloqachi", "Mustaqillik (110/6 kV)", "Aloqachi"], ["P/ST 110/6 kV Mustaqillik G'alaba", "Mustaqillik (110/6 kV)", "G'alaba"], ["P/ST 110/6 kV Mustaqillik Bog'ishamol", "Mustaqillik (110/6 kV)", "Bog'ishamol"], ["P/ST 110/6 kV Mustaqillik Nasos T-1", "Mustaqillik (110/6 kV)", "Nasos T-1"], ["P/ST 110/6 kV Mustaqillik Vodakanal T-1", "Mustaqillik (110/6 kV)", "Vodakanal T-1"], ["P/ST 110/6 kV Mustaqillik Zarkent", "Mustaqillik (110/6 kV)", "Zarkent"], ["P/ST 110/6 kV Mustaqillik Yandama", "Mustaqillik (110/6 kV)", "Yandama"], ["P/ST 110/6 kV Mustaqillik Turkiston", "Mustaqillik (110/6 kV)", "Turkiston"], ["P/ST 110/6 kV Mustaqillik Obod", "Mustaqillik (110/6 kV)", "Obod"], ["P/ST 110/6 kV Mustaqillik Vodokanal T-2", "Mustaqillik (110/6 kV)", "Vodokanal T-2"], ["P/ST 110/6 kV Mustaqillik Nasos T-2", "Mustaqillik (110/6 kV)", "Nasos T-2"], ["P/ST 110/35/6 kV Olmazor Yangihayot", "Olmazor (110/35/6 kV)", "Yangihayot"], ["P/ST 110/35/6 kV Olmazor Shifokor", "Olmazor (110/35/6 kV)", "Shifokor"], ["P/ST 110/35/6 kV Olmazor Mashal", "Olmazor (110/35/6 kV)", "Mashal"], ["P/ST 110/35/6 kV Olmazor Kabullar uyi-1", "Olmazor (110/35/6 kV)", "Kabullar uyi-1"], ["P/ST 110/35/6 kV Olmazor Farovon", "Olmazor (110/35/6 kV)", "Farovon"], ["P/ST 110/35/6 kV Olmazor Kabullar uyi-2", "Olmazor (110/35/6 kV)", "Kabullar uyi-2"], ["P/ST 110/35/6 kV Olmazor Navbahor", "Olmazor (110/35/6 kV)", "Navbahor"], ["P/ST 110/35/6 kV Olmazor Oliygoh", "Olmazor (110/35/6 kV)", "Oliygoh"], ["P/ST 110/35/6 kV Olmazor 1-Massiv", "Olmazor (110/35/6 kV)", "1-Massiv"], ["P/ST 110/35/6 kV Olmazor Suvoqava", "Olmazor (110/35/6 kV)", "Suvoqava"], ["P/ST 110/35/6 kV Olmazor Taraqqiyot Metan", "Olmazor (110/35/6 kV)", "Taraqqiyot Metan"], ["P/ST 110/35/6 kV Olmazor Bank", "Olmazor (110/35/6 kV)", "Bank"], ["P/ST 110/35/6 kV Olmazor Aeroport", "Olmazor (110/35/6 kV)", "Aeroport"], ["P/ST 110/35/6 kV Olmazor Iftixor", "Olmazor (110/35/6 kV)", "Iftixor"], ["P/ST 110/35/6 kV Olmazor Yuksalish", "Olmazor (110/35/6 kV)", "Yuksalish"], ["P/ST 110/35/6 kV Olmazor Artsof", "Olmazor (110/35/6 kV)", "Artsof"], ["P/ST 110/6 kV Nurabod Navruz", "Nurabod (110/6 kV)", "Navruz"], ["P/ST 110/6 kV Nurabod Mashal", "Nurabod (110/6 kV)", "Mashal"], ["P/ST 110/10 kV Transformator Shishaki", "Transformator (110/10 kV)", "Shishaki"], ["P/ST 110/10 kV Transformator Mustaxkam Metan", "Transformator (110/10 kV)", "Mustaxkam Metan"], ["P/ST 110/10 kV Transformator Kartofel-1", "Transformator (110/10 kV)", "Kartofel-1"], ["P/ST 110/10 kV Transformator Serva-1", "Transformator (110/10 kV)", "Serva-1"], ["P/ST 110/10 kV Transformator Raketa -1", "Transformator (110/10 kV)", "Raketa -1"], ["P/ST 110/10 kV Transformator Irvadon", "Transformator (110/10 kV)", "Irvadon"], ["P/ST 110/10 kV Transformator Tarnaya-2", "Transformator (110/10 kV)", "Tarnaya-2"], ["P/ST 110/10 kV Transformator Doz-2", "Transformator (110/10 kV)", "Doz-2"], ["P/ST 110/10 kV Transformator Serva-2", "Transformator (110/10 kV)", "Serva-2"], ["P/ST 35/6 kV Oliygoh Registon", "Oliygoh (35/6 kV)", "Registon"], ["P/ST 35/6 kV Oliygoh MK-11", "Oliygoh (35/6 kV)", "MK-11"], ["P/ST 35/6 kV Oliygoh Kamolot", "Oliygoh (35/6 kV)", "Kamolot"], ["P/ST 35/6 kV Oliygoh Sport kollej", "Oliygoh (35/6 kV)", "Sport kollej"], ["P/ST 35/6 kV Oliygoh KTP-594", "Oliygoh (35/6 kV)", "KTP-594"], ["P/ST 35/6 kV Oliygoh Tuquvchi", "Oliygoh (35/6 kV)", "Tuquvchi"], ["P/ST 35/6 kV Oliygoh Shpris", "Oliygoh (35/6 kV)", "Shpris"], ["P/ST 35/6 kV Oliygoh Arma", "Oliygoh (35/6 kV)", "Arma"], ["P/ST 35/6 kV G'arbiy Mustaqillik", "G'arbiy (35/6 kV)", "Mustaqillik"], ["P/ST 35/6 kV G'arbiy To'quvchi", "G'arbiy (35/6 kV)", "To'quvchi"], ["P/ST 35/6 kV G'arbiy Avtosaltanat", "G'arbiy (35/6 kV)", "Avtosaltanat"], ["P/ST 35/6 kV G'arbiy Diyonat", "G'arbiy (35/6 kV)", "Diyonat"], ["P/ST 35/6 kV G'arbiy Al-Mashriq", "G'arbiy (35/6 kV)", "Al-Mashriq"], ["P/ST 35/6 kV G'arbiy Iftixor", "G'arbiy (35/6 kV)", "Iftixor"], ["P/ST 35/6 kV Davlatobod Yangitong", "Davlatobod (35/6 kV)", "Yangitong"], ["P/ST 35/6 kV Davlatobod Roxat", "Davlatobod (35/6 kV)", "Roxat"], ["P/ST 35/6 kV Davlatobod Temur", "Davlatobod (35/6 kV)", "Temur"], ["P/ST 35/6 kV Davlatobod 6-Massiv", "Davlatobod (35/6 kV)", "6-Massiv"], ["P/ST 35/6 kV Davlatobod Nurchi", "Davlatobod (35/6 kV)", "Nurchi"], ["P/ST 35/6 kV Davlatobod Olmos", "Davlatobod (35/6 kV)", "Olmos"], ["P/ST 35/6 kV Davlatobod Tadbirkor gaz", "Davlatobod (35/6 kV)", "Tadbirkor gaz"], ["P/ST 35/6 kV Davlatobod Bog'shomolobod", "Davlatobod (35/6 kV)", "Bog'shomolobod"], ["P/ST 35/6 kV Davlatobod Ifoda", "Davlatobod (35/6 kV)", "Ifoda"], ["P/ST 110/6 kV Ibrat Yuksalish", "Ibrat (110/6 kV)", "Yuksalish"], ["P/ST 110/6 kV Ibrat Orzu", "Ibrat (110/6 kV)", "Orzu"], ["P/ST 110/6 kV Ibrat Yoshlar", "Ibrat (110/6 kV)", "Yoshlar"], ["P/ST 110/6 kV Ibrat Sardor metal", "Ibrat (110/6 kV)", "Sardor metal"], ["P/ST 110/6 kV Ibrat Glaz ekspo", "Ibrat (110/6 kV)", "Glaz ekspo"], ["P/ST 110/6 kV Ibrat Nasos", "Ibrat (110/6 kV)", "Nasos"], ["P/ST 110/6 kV Ibrat Samira", "Ibrat (110/6 kV)", "Samira"], ["P/ST 110/6 kV Ibrat Nodir metal", "Ibrat (110/6 kV)", "Nodir metal"], ["P/ST 110/6 kV Tegirmon Sanoat", "Tegirmon (110/6 kV)", "Sanoat"], ["P/ST 110/6 kV Tegirmon Soxibkor", "Tegirmon (110/6 kV)", "Soxibkor"], ["P/ST 110/6 kV Tegirmon Obod-2", "Tegirmon (110/6 kV)", "Obod-2"], ["P/ST 110/6 kV Tegirmon Yangiyo'l", "Tegirmon (110/6 kV)", "Yangiyo'l"], ["P/ST 110/6 kV Tegirmon Metal-2", "Tegirmon (110/6 kV)", "Metal-2"], ["P/ST 110/6 kV Vokzal Aziz-94", "Vokzal (110/6 kV)", "Aziz-94"], ["P/ST 110/6 kV Vokzal G'irvon", "Vokzal (110/6 kV)", "G'irvon"], ["P/ST 110/6 kV Vokzal Axsi", "Vokzal (110/6 kV)", "Axsi"], ["P/ST 110/6 kV Vokzal Vokzal", "Vokzal (110/6 kV)", "Vokzal"], ["P/ST 110/10 kV Parrandachi Parranda-3", "Parrandachi (110/10 kV)", "Parranda-3"], ["P/ST 110/10 kV Parrandachi Parranda-2 T-1", "Parrandachi (110/10 kV)", "Parranda-2 T-1"], ["P/ST 110/10 kV Parrandachi Bunyodkor", "Parrandachi (110/10 kV)", "Bunyodkor"], ["P/ST 110/10 kV Parrandachi Asn metal", "Parrandachi (110/10 kV)", "Asn metal"], ["P/ST 110/10 kV Parrandachi Ko'rkam", "Parrandachi (110/10 kV)", "Ko'rkam"], ["P/ST 110/10 kV Parrandachi Radioleneniya", "Parrandachi (110/10 kV)", "Radioleneniya"], ["P/ST 110/10 kV Parrandachi Ittifoq", "Parrandachi (110/10 kV)", "Ittifoq"], ["P/ST 110/10 kV Parrandachi Parranda-2 T-2", "Parrandachi (110/10 kV)", "Parranda-2 T-2"], ["P/ST 110/10 kV Parrandachi Suyuq gaz", "Parrandachi (110/10 kV)", "Suyuq gaz"], ["P/ST 110/10 kV Parrandachi Davr metal", "Parrandachi (110/10 kV)", "Davr metal"], ["P/ST 110/6 kV Kombinat Mehmonxona", "Kombinat (110/6 kV)", "Mehmonxona"], ["P/ST 110/6 kV Kombinat 28 Yacheyka gaz", "Kombinat (110/6 kV)", "28 Yacheyka gaz"], ["P/ST 110/6 kV Kombinat 14 Yacheyka Aisha", "Kombinat (110/6 kV)", "14 Yacheyka Aisha"], ["P/ST 110/6 kV Kombinat 26 Yacheyka Uz chasis", "Kombinat (110/6 kV)", "26 Yacheyka Uz chasis"], ["P/ST 110/6 kV Kombinat 6 Yacheyka Nam qog'oz", "Kombinat (110/6 kV)", "6 Yacheyka Nam qog'oz"], ["P/ST 110/6 kV Kombinat 19 Yacheyka", "Kombinat (110/6 kV)", "19 Yacheyka"], ["P/ST 110/6 kV Kombinat 8 Yacheyka", "Kombinat (110/6 kV)", "8 Yacheyka"], ["P/ST 110/6 kV Kombinat 53 Yacheyka", "Kombinat (110/6 kV)", "53 Yacheyka"], ["P/ST 110/6 kV Kombinat 33 Yacheyka", "Kombinat (110/6 kV)", "33 Yacheyka"], ["P/ST 110/6 kV Kombinat 47 Yacheyka Uz chasis", "Kombinat (110/6 kV)", "47 Yacheyka Uz chasis"], ["P/ST 110/6 kV Kombinat 51 Yacheyka Aeroport", "Kombinat (110/6 kV)", "51 Yacheyka Aeroport"]]; // [to'liq nom, PST, fider]
+const PST = {}; TARMOQ.forEach(([full,p,f])=>(PST[p]=PST[p]||[]).push(f));
 const MAX_FOTO = 4, MAX_FOTO_BYTES = 115000; // bitta rasm ~115 KB gacha siqiladi
 
 // =====================================================================
@@ -249,13 +247,12 @@ const fill = (el, arr, ph) => { el.innerHTML = (ph?`<option value="">${ph}</opti
 fill($("i-q"), QUVVAT, "— tanlang —");
 fill($("i-r"), RUSUM, "— tanlang —");
 fill($("i-c"), Array.from({length:16},(_,i)=>i+1), "— tanlang —");
-fill($("i-p"), Object.keys(PST), "— podstansiya —");
-fill($("i-f"), [], "— avval PST tanlang —");
+$("i-tm").innerHTML = `<option value="">— tarmoqni tanlang (${TARMOQ.length} ta) —</option>` +
+  Object.keys(PST).map(p=>`<optgroup label="${esc(p)}">`+TARMOQ.filter(t=>t[1]===p).map(t=>`<option value="${esc(t[0])}">${esc(t[0])}</option>`).join("")+`</optgroup>`).join("");
 fill($("i-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "— tanlang —");
 fill($("i-h"), HOLAT, "— tanlang —");
 fill($("i-b"), BALANS, "— tanlang —");
 $("mfyList").innerHTML = MFY.map(m=>`<option value="${esc(m)}">`).join("");
-$("i-p").onchange = () => fill($("i-f"), PST[$("i-p").value]||[], $("i-p").value ? "— fider —" : "— avval PST tanlang —");
 
 fill($("f-pst"), Object.keys(PST), "Barcha PST");
 fill($("f-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "Barcha UB");
@@ -303,7 +300,7 @@ $("gpsBtn").onclick = () => {
   if (!navigator.geolocation) return alert("Bu qurilmada GPS yo'q");
   $("gpsBtn").disabled = true; $("gpsBtn").textContent = "📍 Aniqlanmoqda…";
   navigator.geolocation.getCurrentPosition(p => {
-    $("i-lat").value = p.coords.latitude.toFixed(6); $("i-lng").value = p.coords.longitude.toFixed(6);
+    $("i-loc").value = p.coords.latitude.toFixed(6) + ", " + p.coords.longitude.toFixed(6); showLoc();
     $("gpsBtn").disabled = false; $("gpsBtn").textContent = `📍 Olindi (aniqlik ±${Math.round(p.coords.accuracy)} m) — qayta olish`;
   }, err => {
     $("gpsBtn").disabled = false; $("gpsBtn").textContent = "📍 Joylashuvni olish (GPS)";
@@ -311,33 +308,54 @@ $("gpsBtn").onclick = () => {
   }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
 };
 
+// ---------- KOORDINATA ----------
+// "40.998123, 71.612345", "40,998123 71,612345" yoki Google Maps havolasi (@lat,lng / q=lat,lng)
+function parseLoc(s){
+  s = String(s||"").trim(); if (!s) return null;
+  let m = s.match(/[@=\/](-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+  if (!m) m = s.match(/(-?\d{1,2}[.,]\d+)[\s,;]+(-?\d{1,3}[.,]\d+)/);
+  if (!m) return null;
+  const lat = parseFloat(m[1].replace(",", ".")), lng = parseFloat(m[2].replace(",", "."));
+  if (isNaN(lat)||isNaN(lng)||lat<37||lat>46||lng<55||lng>74) return null;
+  return {lat:+lat.toFixed(6), lng:+lng.toFixed(6)};
+}
+function showLoc(){
+  const v = $("i-loc").value.trim(), c = parseLoc(v);
+  $("locInfo").innerHTML = !v ? "" : c
+    ? `✅ ${c.lat}, ${c.lng} — <a target="_blank" href="https://maps.google.com/?q=${c.lat},${c.lng}">xaritada tekshirish</a>`
+    : `<span style="color:var(--bad)">❌ Koordinata tushunilmadi. Namuna: 40.998123, 71.612345</span>`;
+}
+$("i-loc").oninput = showLoc;
+
 // ---------- SAQLASH ----------
 function resetForm(){
   editId = null; photos = [];
-  ["i-n","i-q","i-r","i-c","i-p","i-ub","i-mfy","i-h","i-b","i-lat","i-lng"].forEach(id=>$(id).value="");
-  $("i-p").onchange(); $("i-n").disabled = false;
+  ["i-n","i-q","i-r","i-c","i-tm","i-ub","i-mfy","i-h","i-b","i-loc"].forEach(id=>$(id).value="");
+  $("i-n").disabled = false;
   $("formTitle").textContent = "Yangi TP qo'shish"; $("fMsg").innerHTML = "";
   $("gpsBtn").textContent = "📍 Joylashuvni olish (GPS)";
-  renderPhotos();
+  showLoc(); renderPhotos();
 }
 $("resetBtn").onclick = resetForm;
 
 $("saveBtn").onclick = async () => {
   const msg = t => $("fMsg").innerHTML = `<div class="msg err">${t}</div>`;
   const n = $("i-n").value.trim();
-  const lat = parseFloat($("i-lat").value.replace(",", ".")), lng = parseFloat($("i-lng").value.replace(",", "."));
+  const loc = parseLoc($("i-loc").value);
   const mfy = $("i-mfy").value.trim();
   if (!n) return msg("TP raqamini kiriting");
   const id = editId || tpId(n);
   if (!editId && ITEMS[id]) return msg(`TP ${esc(n)} allaqachon kiritilgan! Ro'yxatdan topib tahrirlang.`);
-  for (const [f,t] of [["i-q","quvvat"],["i-r","rusum"],["i-c","0,4 kV chiqishlar soni"],["i-p","podstansiya"],["i-f","fider"],["i-ub","UB"],["i-h","holat"],["i-b","balans"]])
+  for (const [f,t] of [["i-q","quvvat"],["i-r","rusum"],["i-c","0,4 kV chiqishlar soni"],["i-tm","tarmoq"],["i-ub","UB"],["i-h","holat"],["i-b","balans"]])
     if (!$(f).value) return msg(`${t} tanlanmagan`);
   if (!MFY.includes(mfy)) return msg("MFY ni ro'yxatdan tanlang");
   if (!photos.length) return msg("Kamida 1 ta rasm qo'shing");
-  if (isNaN(lat) || isNaN(lng) || lat<37 || lat>46 || lng<55 || lng>74) return msg("Lokatsiya noto'g'ri — GPS tugmasini bosing");
+  if (!loc) return msg("Lokatsiya noto'g'ri — GPS tugmasini bosing yoki Google Maps koordinatasini qo'ying");
+  const {lat, lng} = loc;
 
   const ub = UB.find(u=>u.ub===$("i-ub").value);
-  const rec = { n, q:+$("i-q").value, r:$("i-r").value, c:+$("i-c").value, p:$("i-p").value, f:$("i-f").value,
+  const tm = TARMOQ.find(t=>t[0]===$("i-tm").value);
+  const rec = { n, q:+$("i-q").value, r:$("i-r").value, c:+$("i-c").value, tm:tm[0], p:tm[1], f:tm[2],
                 ub:ub.ub, m:ub.m, mfy, h:$("i-h").value, b:$("i-b").value, lat, lng, pc:photos.length,
                 by: auth.currentUser.email, t: Date.now() };
   if (editId && ITEMS[editId]) { rec.cby = ITEMS[editId].cby || ITEMS[editId].by; rec.ct = ITEMS[editId].ct || ITEMS[editId].t; }
@@ -406,16 +424,16 @@ function renderList(){
     (!v("f-mfy")||x.mfy===v("f-mfy")) && (!v("f-h")||x.h===v("f-h")) && (!v("f-b")||x.b===v("f-b"))
   ).sort((a,b)=>String(a[1].n).localeCompare(String(b[1].n), undefined, {numeric:true}));
   $("f-count").textContent = `Topildi: ${FILTERED.length} ta`;
-  $("listTbl").innerHTML = `<tr><th>TP</th><th class="n">kVA</th><th>Rusum</th><th>PST / Fider</th><th>UB</th><th>MFY</th><th>Holat</th></tr>` +
+  $("listTbl").innerHTML = `<tr><th>TP</th><th class="n">kVA</th><th>Rusum</th><th>Tarmoq</th><th>UB</th><th>MFY</th><th>Holat</th></tr>` +
     FILTERED.map(([id,x])=>`<tr class="click" data-id="${esc(id)}"><td><b>${esc(x.n)}</b></td><td class="n">${x.q}</td><td>${esc(x.r)}</td><td>${esc(x.p.split(" (")[0])} / ${esc(x.f)}</td><td>${esc(x.ub)}</td><td>${esc(x.mfy)}</td><td><i class="dot h-${x.h}"></i>${hT(x.h)}</td></tr>`).join("");
   $("listTbl").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openPass(r.dataset.id));
 }
 $("xlsBtn").onclick = () => {
   const rows = FILTERED.map(([id,x],i)=>({"№":i+1,"TP raqami":x.n,"Quvvati, kVA":x.q,"Rusumi":x.r,"0,4 kV chiqishlar":x.c,
-    "Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(x.h),"Balans":bT(x.b),
+    "Tarmoq":x.tm||`${x.p} ${x.f}`,"Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(x.h),"Balans":bT(x.b),
     "Kenglik":x.lat,"Uzunlik":x.lng,"Rasmlar soni":x.pc,"Kiritgan":x.cby||x.by,"Oxirgi o'zgartirish":new Date(x.t).toLocaleString("ru")}));
   const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
-  ws["!cols"] = [5,10,8,8,8,26,20,7,18,18,9,12,11,11,8,24,18].map(w=>({wch:w}));
+  ws["!cols"] = [5,10,8,8,8,40,26,20,7,18,18,9,12,11,11,8,24,18].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, "TP hatlov");
   XLSX.writeFile(wb, `TP_hatlov_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
@@ -425,7 +443,7 @@ let passId = null;
 async function openPass(id){
   const x = ITEMS[id]; if (!x) return; passId = id;
   $("pTitle").innerHTML = `<i class="dot h-${x.h}"></i>TP ${esc(x.n)}`;
-  const rows = [["Quvvati",x.q+" kVA"],["Rusumi",x.r],["0,4 kV chiqishlar soni",x.c],["Podstansiya",x.p],["Fider",x.f],
+  const rows = [["Quvvati",x.q+" kVA"],["Rusumi",x.r],["0,4 kV chiqishlar soni",x.c],["Tarmoq",x.tm||`${x.p} ${x.f}`],
     ["Mas'ul brigada",`${x.ub} — ${x.m}`],["MFY",x.mfy],["Holati",hT(x.h)],["Balans",bT(x.b)],
     ["Lokatsiya",`<a target="_blank" href="https://maps.google.com/?q=${x.lat},${x.lng}">${x.lat}, ${x.lng}</a>`],
     ["Kiritgan",esc(x.cby||x.by)],["Oxirgi o'zgartirish",`${new Date(x.t).toLocaleString("ru")} (${esc(x.by)})`]];
@@ -448,9 +466,9 @@ $("pEdit").onclick = () => {
   resetForm(); editId = id;
   $("i-n").value = x.n; $("i-n").disabled = true;
   $("i-q").value = x.q; $("i-r").value = x.r; $("i-c").value = x.c;
-  $("i-p").value = x.p; $("i-p").onchange(); $("i-f").value = x.f;
+  $("i-tm").value = x.tm || (TARMOQ.find(t=>t[1]===x.p&&t[2]===x.f)||[""])[0];
   $("i-ub").value = x.ub; $("i-mfy").value = x.mfy; $("i-h").value = x.h; $("i-b").value = x.b;
-  $("i-lat").value = x.lat; $("i-lng").value = x.lng;
+  $("i-loc").value = `${x.lat}, ${x.lng}`; showLoc();
   try { photos = JSON.parse($("pModal").dataset.photos || "[]"); } catch { photos = []; }
   renderPhotos();
   $("formTitle").textContent = `TP ${x.n} — tahrirlash`;
