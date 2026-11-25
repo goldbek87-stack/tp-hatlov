@@ -174,6 +174,12 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 </main>
 </div>
 
+<!-- RASM KATTALASHTIRISH -->
+<div id="imgView" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;display:none;overflow:auto;padding:10px">
+  <button class="btn sec" style="position:fixed;top:10px;right:10px;z-index:3001" onclick="this.parentNode.style.display='none'">✕</button>
+  <img id="imgViewImg" style="max-width:100%;display:block;margin:40px auto 0">
+</div>
+
 <!-- FIDER -->
 <div class="modal" id="fdModal"><div class="card">
   <div style="display:flex;align-items:center"><h3 style="margin:0;flex:1" id="fdTitle"></h3><button class="btn sec" id="fdClose">✕</button></div>
@@ -496,14 +502,25 @@ function renderList(){
     FILTERED.map(([id,x])=>`<tr class="click" data-id="${esc(id)}"><td><b>${esc(x.n)}</b></td><td class="n">${x.q}</td><td>${esc(x.r)}</td><td>${esc(x.p.split(" (")[0])} / ${esc(x.f)}</td><td>${esc(x.ub)}</td><td>${esc(x.mfy)}</td><td><i class="dot h-${x.h}"></i>${hT(x.h)}</td></tr>`).join("");
   $("listTbl").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openPass(r.dataset.id));
 }
-$("xlsBtn").onclick = () => {
+$("xlsBtn").onclick = async () => {
   const rows = FILTERED.map(([id,x],i)=>({"№":i+1,"TP raqami":x.n,"Quvvati, kVA":x.q,"Rusumi":x.r,"0,4 kV chiqishlar":x.c,
     "Tarmoq":x.tm||`${x.p} ${x.f}`,"Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(x.h),"Balans":bT(x.b),
     "Kenglik":x.lat,"Uzunlik":x.lng,"Rasmlar soni":x.pc,"Kiritgan":x.cby||x.by,"Oxirgi o'zgartirish":new Date(x.t).toLocaleString("ru")}));
   const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
   ws["!cols"] = [5,10,8,8,8,40,26,20,7,18,18,9,12,11,11,8,24,18].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, "TP hatlov");
-  XLSX.writeFile(wb, `TP_hatlov_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const name = `TP_hatlov_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const C = window.Capacitor;
+  if (C && C.isNativePlatform && C.isNativePlatform() && C.Plugins.Filesystem) {
+    // APK ichida: faylni saqlab, "Ulashish" oynasini ochamiz (Telegram, Drive, Fayllar...)
+    try {
+      const data = XLSX.write(wb, {bookType:"xlsx", type:"base64"});
+      const r = await C.Plugins.Filesystem.writeFile({path:name, data, directory:"CACHE"});
+      await C.Plugins.Share.share({title:name, files:[r.uri]});
+    } catch(e) { if (!/cancel/i.test(e.message||"")) alert("Excel saqlashda xato: " + e.message); }
+    return;
+  }
+  XLSX.writeFile(wb, name);
 };
 
 // ---------- PASPORT ----------
@@ -611,7 +628,7 @@ async function openFider(full){
     } catch(e){ $("fdSxView").textContent = "Sxemani yuklab bo'lmadi: " + e.message; }
   }
 }
-function bigImg(src){ const w = window.open(); w.document.write(`<body style="margin:0;background:#111"><img src="${src}" style="max-width:100%;display:block;margin:auto"></body>`); }
+function bigImg(src){ $("imgViewImg").src = src; $("imgView").style.display = "block"; }
 function fdEditMode(){
   const d = FD[fdId(curFd)]||{};
   $("fd-u").value = d.u!=null ? String(d.u).replace(".",",") : ""; $("fd-ty").value = d.ty??""; $("fd-ts").value = d.ts??""; $("fd-iz").value = d.iz||"";
