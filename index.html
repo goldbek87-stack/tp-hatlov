@@ -57,6 +57,14 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 .login{max-width:380px;margin:60px auto}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .legend{display:flex;gap:14px;font-size:13px;margin:6px 0}
+.kpi.click{cursor:pointer}.kpi.click:hover{border-color:var(--pri);box-shadow:0 0 0 2px #1565c022}
+.pstgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.pst{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}
+.pst:hover,.pst.on{border-color:var(--pri);box-shadow:0 0 0 2px #1565c022}
+.pst h4{margin:0 0 6px}.pst div{font-size:13px;color:var(--mut);line-height:1.6}
+.sxema img{width:100%;border-radius:8px;border:1px solid var(--line);cursor:zoom-in}
+.ro .adm{display:none!important}
+.badge{display:inline-block;background:#e8eef7;color:var(--pri);border-radius:6px;padding:2px 8px;font-size:12px}
 </style>
 </head>
 <body>
@@ -78,25 +86,36 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 <div id="app" class="hide">
 <nav>
   <button data-t="kpi" class="on">📊 KPI</button>
+  <button data-t="pst">⚡ Tarmoq</button>
   <button data-t="map">🗺 Xarita</button>
   <button data-t="list">📋 Ro'yxat</button>
-  <button data-t="add">➕ Qo'shish</button>
+  <button data-t="add" class="adm">➕ Qo'shish</button>
 </nav>
 <main>
 
 <!-- KPI -->
 <section id="t-kpi">
   <div class="kpis">
-    <div class="kpi"><span>Hatlovdan o'tgan TP</span><b id="k-jami">0</b><div class="bar"><i id="k-bar" style="width:0"></i></div><span id="k-foiz"></span></div>
-    <div class="kpi"><span><i class="dot h-yaxshi"></i>Yaxshi</span><b id="k-yaxshi">0</b></div>
-    <div class="kpi"><span><i class="dot h-orta"></i>O'rta</span><b id="k-orta">0</b></div>
-    <div class="kpi"><span><i class="dot h-yomon"></i>Yomon</span><b id="k-yomon">0</b></div>
-    <div class="kpi"><span>Elektroset balansida</span><b id="k-el">0</b></div>
-    <div class="kpi"><span>Iste'molchi balansida</span><b id="k-ist">0</b></div>
+    <div class="kpi click" data-k=""><span>Hatlovdan o'tgan TP</span><b id="k-jami">0</b><div class="bar"><i id="k-bar" style="width:0"></i></div><span id="k-foiz"></span></div>
+    <div class="kpi click" data-k="h:yaxshi"><span><i class="dot h-yaxshi"></i>Yaxshi</span><b id="k-yaxshi">0</b></div>
+    <div class="kpi click" data-k="h:orta"><span><i class="dot h-orta"></i>O'rta</span><b id="k-orta">0</b></div>
+    <div class="kpi click" data-k="h:yomon"><span><i class="dot h-yomon"></i>Yomon</span><b id="k-yomon">0</b></div>
+    <div class="kpi click" data-k="b:elektroset"><span>Elektroset balansida</span><b id="k-el">0</b></div>
+    <div class="kpi click" data-k="b:istemolchi"><span>Iste'molchi balansida</span><b id="k-ist">0</b></div>
     <div class="kpi"><span>Jami quvvat, kVA</span><b id="k-kva">0</b></div>
   </div>
+  <div style="font-size:13px;color:var(--mut);margin-top:6px">👆 Kartochkani bossangiz, o'sha TP lar ro'yxati ochiladi</div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">UB bo'yicha</h3><table id="k-ub"></table></div>
   <div class="card"><h3 style="margin-top:0">Podstansiya bo'yicha</h3><table id="k-pst"></table></div>
+</section>
+
+<!-- TARMOQ (PST / FIDER) -->
+<section id="t-pst" class="hide">
+  <div class="pstgrid" id="pstGrid"></div>
+  <div class="card hide" id="pstBox" style="margin-top:12px">
+    <h3 style="margin-top:0" id="pstTitle"></h3>
+    <div style="overflow-x:auto"><table id="pstTbl"></table></div>
+  </div>
 </section>
 
 <!-- MAP -->
@@ -111,6 +130,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
     <div class="filters">
       <input id="f-q" placeholder="🔍 TP raqami">
       <select id="f-pst"></select>
+      <select id="f-tm"></select>
       <select id="f-ub"></select>
       <select id="f-mfy"></select>
       <select id="f-h"></select>
@@ -137,7 +157,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
     <label>7. MFY *</label><input id="i-mfy" list="mfyList" placeholder="Yozing yoki tanlang"><datalist id="mfyList"></datalist>
     <label>8. TP rasmlari (1 tadan 4 tagacha) *</label>
     <div class="photos" id="phBox"></div>
-    <input type="file" id="phFile" accept="image/*" class="hide">
+    <input type="file" id="phFile" accept="image/*" multiple class="hide">
     <div class="row">
       <div><label>9. TP holati *</label><select id="i-h"></select></div>
       <div><label>11. Balans *</label><select id="i-b"></select></div>
@@ -154,12 +174,32 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
 </main>
 </div>
 
+<!-- FIDER -->
+<div class="modal" id="fdModal"><div class="card">
+  <div style="display:flex;align-items:center"><h3 style="margin:0;flex:1" id="fdTitle"></h3><button class="btn sec" id="fdClose">✕</button></div>
+  <div id="fdView" style="margin-top:10px"></div>
+  <div id="fdForm" class="hide">
+    <div class="row">
+      <div><label>Fider uzunligi, km</label><input id="fd-u" inputmode="decimal" placeholder="Masalan: 12,5"></div>
+      <div><label>Tayanchlar soni</label><input id="fd-ty" inputmode="numeric" placeholder="Masalan: 240"></div>
+    </div>
+    <label>TP soni (sxema bo'yicha)</label><input id="fd-ts" inputmode="numeric" placeholder="Masalan: 18">
+    <label>Izoh</label><input id="fd-iz" placeholder="Qo'shimcha ma'lumot">
+    <label>Sxema rasmi (1 ta)</label>
+    <div class="row"><button class="btn sec" id="fdSxBtn">🖼 Sxema yuklash</button><button class="btn del" id="fdSxDel">Sxemani olib tashlash</button></div>
+    <input type="file" id="fdSxFile" accept="image/*" class="hide">
+    <div class="sxema" id="fdSxPrev" style="margin-top:8px"></div>
+    <br><div class="row"><button class="btn" id="fdSave">💾 Saqlash</button><button class="btn sec" id="fdCancel">Bekor qilish</button></div>
+    <div id="fdMsg"></div>
+  </div>
+</div></div>
+
 <!-- PASSPORT -->
 <div class="modal" id="pModal"><div class="card">
   <div style="display:flex;align-items:center"><h3 style="margin:0;flex:1" id="pTitle"></h3><button class="btn sec" id="pClose">✕</button></div>
   <table class="pass" id="pTbl" style="margin-top:10px"></table>
   <div class="pass-photos" id="pPhotos">Rasmlar yuklanmoqda…</div>
-  <br><div class="row"><button class="btn sec" id="pEdit">✏️ Tahrirlash</button><button class="btn del" id="pDel">🗑 O'chirish</button></div>
+  <br><div class="row adm"><button class="btn sec" id="pEdit">✏️ Tahrirlash</button><button class="btn del" id="pDel">🗑 O'chirish</button></div>
 </div></div>
 
 <script type="module">
@@ -192,7 +232,9 @@ const BALANS = [{v:"elektroset",t:"Elektroset"},{v:"istemolchi",t:"Iste'molchi"}
 const MFY = ["Yuksalish","Orzu","Elxon","Nurobod","Gulshan","Navro'z","Ijodkor","Tadbirkor","Gulobod","Irvalon","Yuqori Rovuston","O'rta Rovuston","Quyi Rovuston","To'quvchi","Umid","Yangi Tong","Xalqlar Do'stligi","Mustaqillik","Navbahor","Porloq","Istiqlol","Yuqori Girvon","O'rta Girvon","Quyi Girvon","Elobod","Shishaki","Bog'","Davlatobod","Yangiobod","Zarafshon","Dashtbog'","Mehribonlik"];
 const TARMOQ = [["P/ST 110/6 kV Mustaqillik Shifosuv", "Mustaqillik (110/6 kV)", "Shifosuv"], ["P/ST 110/6 kV Mustaqillik Aloqachi", "Mustaqillik (110/6 kV)", "Aloqachi"], ["P/ST 110/6 kV Mustaqillik G'alaba", "Mustaqillik (110/6 kV)", "G'alaba"], ["P/ST 110/6 kV Mustaqillik Bog'ishamol", "Mustaqillik (110/6 kV)", "Bog'ishamol"], ["P/ST 110/6 kV Mustaqillik Nasos T-1", "Mustaqillik (110/6 kV)", "Nasos T-1"], ["P/ST 110/6 kV Mustaqillik Vodakanal T-1", "Mustaqillik (110/6 kV)", "Vodakanal T-1"], ["P/ST 110/6 kV Mustaqillik Zarkent", "Mustaqillik (110/6 kV)", "Zarkent"], ["P/ST 110/6 kV Mustaqillik Yandama", "Mustaqillik (110/6 kV)", "Yandama"], ["P/ST 110/6 kV Mustaqillik Turkiston", "Mustaqillik (110/6 kV)", "Turkiston"], ["P/ST 110/6 kV Mustaqillik Obod", "Mustaqillik (110/6 kV)", "Obod"], ["P/ST 110/6 kV Mustaqillik Vodokanal T-2", "Mustaqillik (110/6 kV)", "Vodokanal T-2"], ["P/ST 110/6 kV Mustaqillik Nasos T-2", "Mustaqillik (110/6 kV)", "Nasos T-2"], ["P/ST 110/35/6 kV Olmazor Yangihayot", "Olmazor (110/35/6 kV)", "Yangihayot"], ["P/ST 110/35/6 kV Olmazor Shifokor", "Olmazor (110/35/6 kV)", "Shifokor"], ["P/ST 110/35/6 kV Olmazor Mashal", "Olmazor (110/35/6 kV)", "Mashal"], ["P/ST 110/35/6 kV Olmazor Kabullar uyi-1", "Olmazor (110/35/6 kV)", "Kabullar uyi-1"], ["P/ST 110/35/6 kV Olmazor Farovon", "Olmazor (110/35/6 kV)", "Farovon"], ["P/ST 110/35/6 kV Olmazor Kabullar uyi-2", "Olmazor (110/35/6 kV)", "Kabullar uyi-2"], ["P/ST 110/35/6 kV Olmazor Navbahor", "Olmazor (110/35/6 kV)", "Navbahor"], ["P/ST 110/35/6 kV Olmazor Oliygoh", "Olmazor (110/35/6 kV)", "Oliygoh"], ["P/ST 110/35/6 kV Olmazor 1-Massiv", "Olmazor (110/35/6 kV)", "1-Massiv"], ["P/ST 110/35/6 kV Olmazor Suvoqava", "Olmazor (110/35/6 kV)", "Suvoqava"], ["P/ST 110/35/6 kV Olmazor Taraqqiyot Metan", "Olmazor (110/35/6 kV)", "Taraqqiyot Metan"], ["P/ST 110/35/6 kV Olmazor Bank", "Olmazor (110/35/6 kV)", "Bank"], ["P/ST 110/35/6 kV Olmazor Aeroport", "Olmazor (110/35/6 kV)", "Aeroport"], ["P/ST 110/35/6 kV Olmazor Iftixor", "Olmazor (110/35/6 kV)", "Iftixor"], ["P/ST 110/35/6 kV Olmazor Yuksalish", "Olmazor (110/35/6 kV)", "Yuksalish"], ["P/ST 110/35/6 kV Olmazor Artsof", "Olmazor (110/35/6 kV)", "Artsof"], ["P/ST 110/6 kV Nurabod Navruz", "Nurabod (110/6 kV)", "Navruz"], ["P/ST 110/6 kV Nurabod Mashal", "Nurabod (110/6 kV)", "Mashal"], ["P/ST 110/10 kV Transformator Shishaki", "Transformator (110/10 kV)", "Shishaki"], ["P/ST 110/10 kV Transformator Mustaxkam Metan", "Transformator (110/10 kV)", "Mustaxkam Metan"], ["P/ST 110/10 kV Transformator Kartofel-1", "Transformator (110/10 kV)", "Kartofel-1"], ["P/ST 110/10 kV Transformator Serva-1", "Transformator (110/10 kV)", "Serva-1"], ["P/ST 110/10 kV Transformator Raketa -1", "Transformator (110/10 kV)", "Raketa -1"], ["P/ST 110/10 kV Transformator Irvadon", "Transformator (110/10 kV)", "Irvadon"], ["P/ST 110/10 kV Transformator Tarnaya-2", "Transformator (110/10 kV)", "Tarnaya-2"], ["P/ST 110/10 kV Transformator Doz-2", "Transformator (110/10 kV)", "Doz-2"], ["P/ST 110/10 kV Transformator Serva-2", "Transformator (110/10 kV)", "Serva-2"], ["P/ST 35/6 kV Oliygoh Registon", "Oliygoh (35/6 kV)", "Registon"], ["P/ST 35/6 kV Oliygoh MK-11", "Oliygoh (35/6 kV)", "MK-11"], ["P/ST 35/6 kV Oliygoh Kamolot", "Oliygoh (35/6 kV)", "Kamolot"], ["P/ST 35/6 kV Oliygoh Sport kollej", "Oliygoh (35/6 kV)", "Sport kollej"], ["P/ST 35/6 kV Oliygoh KTP-594", "Oliygoh (35/6 kV)", "KTP-594"], ["P/ST 35/6 kV Oliygoh Tuquvchi", "Oliygoh (35/6 kV)", "Tuquvchi"], ["P/ST 35/6 kV Oliygoh Shpris", "Oliygoh (35/6 kV)", "Shpris"], ["P/ST 35/6 kV Oliygoh Arma", "Oliygoh (35/6 kV)", "Arma"], ["P/ST 35/6 kV G'arbiy Mustaqillik", "G'arbiy (35/6 kV)", "Mustaqillik"], ["P/ST 35/6 kV G'arbiy To'quvchi", "G'arbiy (35/6 kV)", "To'quvchi"], ["P/ST 35/6 kV G'arbiy Avtosaltanat", "G'arbiy (35/6 kV)", "Avtosaltanat"], ["P/ST 35/6 kV G'arbiy Diyonat", "G'arbiy (35/6 kV)", "Diyonat"], ["P/ST 35/6 kV G'arbiy Al-Mashriq", "G'arbiy (35/6 kV)", "Al-Mashriq"], ["P/ST 35/6 kV G'arbiy Iftixor", "G'arbiy (35/6 kV)", "Iftixor"], ["P/ST 35/6 kV Davlatobod Yangitong", "Davlatobod (35/6 kV)", "Yangitong"], ["P/ST 35/6 kV Davlatobod Roxat", "Davlatobod (35/6 kV)", "Roxat"], ["P/ST 35/6 kV Davlatobod Temur", "Davlatobod (35/6 kV)", "Temur"], ["P/ST 35/6 kV Davlatobod 6-Massiv", "Davlatobod (35/6 kV)", "6-Massiv"], ["P/ST 35/6 kV Davlatobod Nurchi", "Davlatobod (35/6 kV)", "Nurchi"], ["P/ST 35/6 kV Davlatobod Olmos", "Davlatobod (35/6 kV)", "Olmos"], ["P/ST 35/6 kV Davlatobod Tadbirkor gaz", "Davlatobod (35/6 kV)", "Tadbirkor gaz"], ["P/ST 35/6 kV Davlatobod Bog'shomolobod", "Davlatobod (35/6 kV)", "Bog'shomolobod"], ["P/ST 35/6 kV Davlatobod Ifoda", "Davlatobod (35/6 kV)", "Ifoda"], ["P/ST 110/6 kV Ibrat Yuksalish", "Ibrat (110/6 kV)", "Yuksalish"], ["P/ST 110/6 kV Ibrat Orzu", "Ibrat (110/6 kV)", "Orzu"], ["P/ST 110/6 kV Ibrat Yoshlar", "Ibrat (110/6 kV)", "Yoshlar"], ["P/ST 110/6 kV Ibrat Sardor metal", "Ibrat (110/6 kV)", "Sardor metal"], ["P/ST 110/6 kV Ibrat Glaz ekspo", "Ibrat (110/6 kV)", "Glaz ekspo"], ["P/ST 110/6 kV Ibrat Nasos", "Ibrat (110/6 kV)", "Nasos"], ["P/ST 110/6 kV Ibrat Samira", "Ibrat (110/6 kV)", "Samira"], ["P/ST 110/6 kV Ibrat Nodir metal", "Ibrat (110/6 kV)", "Nodir metal"], ["P/ST 110/6 kV Tegirmon Sanoat", "Tegirmon (110/6 kV)", "Sanoat"], ["P/ST 110/6 kV Tegirmon Soxibkor", "Tegirmon (110/6 kV)", "Soxibkor"], ["P/ST 110/6 kV Tegirmon Obod-2", "Tegirmon (110/6 kV)", "Obod-2"], ["P/ST 110/6 kV Tegirmon Yangiyo'l", "Tegirmon (110/6 kV)", "Yangiyo'l"], ["P/ST 110/6 kV Tegirmon Metal-2", "Tegirmon (110/6 kV)", "Metal-2"], ["P/ST 110/6 kV Vokzal Aziz-94", "Vokzal (110/6 kV)", "Aziz-94"], ["P/ST 110/6 kV Vokzal G'irvon", "Vokzal (110/6 kV)", "G'irvon"], ["P/ST 110/6 kV Vokzal Axsi", "Vokzal (110/6 kV)", "Axsi"], ["P/ST 110/6 kV Vokzal Vokzal", "Vokzal (110/6 kV)", "Vokzal"], ["P/ST 110/10 kV Parrandachi Parranda-3", "Parrandachi (110/10 kV)", "Parranda-3"], ["P/ST 110/10 kV Parrandachi Parranda-2 T-1", "Parrandachi (110/10 kV)", "Parranda-2 T-1"], ["P/ST 110/10 kV Parrandachi Bunyodkor", "Parrandachi (110/10 kV)", "Bunyodkor"], ["P/ST 110/10 kV Parrandachi Asn metal", "Parrandachi (110/10 kV)", "Asn metal"], ["P/ST 110/10 kV Parrandachi Ko'rkam", "Parrandachi (110/10 kV)", "Ko'rkam"], ["P/ST 110/10 kV Parrandachi Radioleneniya", "Parrandachi (110/10 kV)", "Radioleneniya"], ["P/ST 110/10 kV Parrandachi Ittifoq", "Parrandachi (110/10 kV)", "Ittifoq"], ["P/ST 110/10 kV Parrandachi Parranda-2 T-2", "Parrandachi (110/10 kV)", "Parranda-2 T-2"], ["P/ST 110/10 kV Parrandachi Suyuq gaz", "Parrandachi (110/10 kV)", "Suyuq gaz"], ["P/ST 110/10 kV Parrandachi Davr metal", "Parrandachi (110/10 kV)", "Davr metal"], ["P/ST 110/6 kV Kombinat Mehmonxona", "Kombinat (110/6 kV)", "Mehmonxona"], ["P/ST 110/6 kV Kombinat 28 Yacheyka gaz", "Kombinat (110/6 kV)", "28 Yacheyka gaz"], ["P/ST 110/6 kV Kombinat 14 Yacheyka Aisha", "Kombinat (110/6 kV)", "14 Yacheyka Aisha"], ["P/ST 110/6 kV Kombinat 26 Yacheyka Uz chasis", "Kombinat (110/6 kV)", "26 Yacheyka Uz chasis"], ["P/ST 110/6 kV Kombinat 6 Yacheyka Nam qog'oz", "Kombinat (110/6 kV)", "6 Yacheyka Nam qog'oz"], ["P/ST 110/6 kV Kombinat 19 Yacheyka", "Kombinat (110/6 kV)", "19 Yacheyka"], ["P/ST 110/6 kV Kombinat 8 Yacheyka", "Kombinat (110/6 kV)", "8 Yacheyka"], ["P/ST 110/6 kV Kombinat 53 Yacheyka", "Kombinat (110/6 kV)", "53 Yacheyka"], ["P/ST 110/6 kV Kombinat 33 Yacheyka", "Kombinat (110/6 kV)", "33 Yacheyka"], ["P/ST 110/6 kV Kombinat 47 Yacheyka Uz chasis", "Kombinat (110/6 kV)", "47 Yacheyka Uz chasis"], ["P/ST 110/6 kV Kombinat 51 Yacheyka Aeroport", "Kombinat (110/6 kV)", "51 Yacheyka Aeroport"]]; // [to'liq nom, PST, fider]
 const PST = {}; TARMOQ.forEach(([full,p,f])=>(PST[p]=PST[p]||[]).push(f));
-const MAX_FOTO = 4, MAX_FOTO_BYTES = 115000; // bitta rasm ~115 KB gacha siqiladi
+const MAX_FOTO = 4, MAX_FOTO_BYTES = 115000; // bitta TP rasmi ~115 KB gacha siqiladi
+const SXEMA_BYTES = 350000;                    // fider sxemasi ~350 KB gacha (o'qilishi uchun kattaroq)
+const ADMIN = "0032@gmail.com";                // faqat shu foydalanuvchi kirita/o'zgartira oladi
 
 // =====================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -203,6 +245,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const metaRef = doc(db, "meta", "tplar"); // barcha TP qisqacha — 1 ta o'qish
+const fdRef = doc(db, "meta", "fiderlar"); // barcha fider ma'lumotlari — 1 ta o'qish
+const fdId = full => full.replace(/[^0-9A-Za-z]+/g,"_");
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -211,19 +255,28 @@ const bT = v => (BALANS.find(h=>h.v===v)||{}).t || v;
 const tpId = n => String(n).trim().toUpperCase().replace(/[^0-9A-ZА-ЯЁЎҚҒҲ-]+/gi,"_");
 
 let ITEMS = {};      // id -> qisqa ma'lumot
+const tmOf = x => x.tm || (TARMOQ.find(t=>t[1]===x.p&&t[2]===x.f)||[""])[0];
 let editId = null;   // tahrirlanayotgan TP
 let photos = [];     // dataURL lar
-let unsub = null;
+let unsub = null, unsubFd = null;
+let FD = {};          // fider id -> {u, ty, ts, iz, sx}
+let isAdmin = false;
 
 // ---------- AUTH ----------
 onAuthStateChanged(auth, u => {
   $("loginBox").classList.toggle("hide", !!u);
   $("app").classList.toggle("hide", !u);
   $("outBtn").classList.toggle("hide", !u);
-  $("who").textContent = u ? u.email : "";
-  if (u && !unsub) unsub = onSnapshot(metaRef, s => { ITEMS = (s.exists() && s.data().items) || {}; renderAll(); },
-                                      e => alert("Bazaga ulanishda xato: " + e.message));
-  if (!u && unsub) { unsub(); unsub = null; }
+  isAdmin = !!u && (u.email||"").toLowerCase() === ADMIN;
+  document.body.classList.toggle("ro", !isAdmin);
+  $("who").textContent = u ? u.email + (isAdmin ? " · kirituvchi" : " · faqat ko'rish") : "";
+  if (u && !unsub) {
+    unsub = onSnapshot(metaRef, s => { ITEMS = (s.exists() && s.data().items) || {}; renderAll(); },
+                       e => alert("Bazaga ulanishda xato: " + e.message));
+    unsubFd = onSnapshot(fdRef, s => { FD = (s.exists() && s.data().items) || {}; renderPst(); });
+  }
+  if (!u && unsub) { unsub(); unsubFd(); unsub = unsubFd = null; }
+  if (u && !isAdmin && !$("t-add").classList.contains("hide")) tab("kpi");
 });
 $("lBtn").onclick = async () => {
   $("lMsg").innerHTML = "";
@@ -237,11 +290,19 @@ $("outBtn").onclick = () => signOut(auth);
 let map, layer;
 function tab(t){
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on", b.dataset.t===t));
-  ["kpi","map","list","add"].forEach(x=>$("t-"+x).classList.toggle("hide", x!==t));
+  ["kpi","pst","map","list","add"].forEach(x=>$("t-"+x).classList.toggle("hide", x!==t));
   if (t==="map") { initMap(); setTimeout(()=>map.invalidateSize(),50); }
   window.scrollTo(0,0);
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{ if(b.dataset.t==="add" && !editId) resetForm(); tab(b.dataset.t); });
+// KPI kartochkasini bosganda — ro'yxat filtr bilan ochiladi
+document.querySelectorAll(".kpi.click").forEach(k=>k.onclick=()=>{
+  ["f-q","f-pst","f-tm","f-ub","f-mfy","f-h","f-b"].forEach(id=>$(id).value="");
+  const [key,val] = (k.dataset.k||"").split(":");
+  if (key==="h") $("f-h").value = val;
+  if (key==="b") $("f-b").value = val;
+  renderList(); tab("list");
+});
 
 // ---------- SELECT TO'LDIRISH ----------
 const fill = (el, arr, ph) => { el.innerHTML = (ph?`<option value="">${ph}</option>`:"") + arr.map(o=>typeof o==="object"?`<option value="${esc(o.v)}">${esc(o.t)}</option>`:`<option value="${esc(o)}">${esc(o)}</option>`).join(""); };
@@ -255,11 +316,12 @@ fill($("i-b"), BALANS, "— tanlang —");
 $("mfyList").innerHTML = MFY.map(m=>`<option value="${esc(m)}">`).join("");
 
 fill($("f-pst"), Object.keys(PST), "Barcha PST");
+fill($("f-tm"), TARMOQ.map(t=>({v:t[0],t:t[0]})), "Barcha fiderlar");
 fill($("f-ub"), UB.map(u=>({v:u.ub,t:`${u.ub} — ${u.m}`})), "Barcha UB");
 fill($("f-mfy"), MFY, "Barcha MFY");
 fill($("f-h"), HOLAT, "Barcha holat");
 fill($("f-b"), BALANS, "Barcha balans");
-["f-q","f-pst","f-ub","f-mfy","f-h","f-b"].forEach(id=>$(id).oninput=renderList);
+["f-q","f-pst","f-tm","f-ub","f-mfy","f-h","f-b"].forEach(id=>$(id).oninput=renderList);
 
 // ---------- RASMLAR ----------
 function renderPhotos(){
@@ -270,17 +332,21 @@ function renderPhotos(){
   const a = $("phAdd"); if (a) a.onclick = () => $("phFile").click();
 }
 $("phFile").onchange = async e => {
-  const f = e.target.files[0]; e.target.value = "";
-  if (!f) return;
-  try { photos.push(await compress(f)); renderPhotos(); }
-  catch { alert("Rasmni o'qib bo'lmadi"); }
+  const files = [...e.target.files]; e.target.value = "";
+  if (!files.length) return;
+  const joy = MAX_FOTO - photos.length;
+  if (files.length > joy) alert(`Ko'pi bilan ${MAX_FOTO} ta rasm. Birinchi ${joy} tasi olindi.`);
+  for (const f of files.slice(0, joy)) {
+    try { photos.push(await compress(f)); renderPhotos(); }
+    catch { alert("Rasmni o'qib bo'lmadi: " + f.name); }
+  }
 };
-function compress(file){
+function compress(file, MAXPX = 1000, LIMIT = MAX_FOTO_BYTES){
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      let max = 1000, q = 0.6, out;
+      let max = MAXPX, q = 0.6, out;
       const cv = document.createElement("canvas"), cx = cv.getContext("2d");
       do {
         const k = Math.min(1, max / Math.max(img.width, img.height));
@@ -288,7 +354,7 @@ function compress(file){
         cx.drawImage(img, 0, 0, cv.width, cv.height);
         out = cv.toDataURL("image/jpeg", q);
         if (q > 0.35) q -= 0.1; else max = Math.round(max*0.8);
-      } while (out.length > MAX_FOTO_BYTES && max > 300);
+      } while (out.length > LIMIT && max > 300);
       res(out);
     };
     img.onerror = rej; img.src = url;
@@ -340,6 +406,7 @@ $("resetBtn").onclick = resetForm;
 
 $("saveBtn").onclick = async () => {
   const msg = t => $("fMsg").innerHTML = `<div class="msg err">${t}</div>`;
+  if (!isAdmin) return msg("Sizda kiritish huquqi yo'q");
   const n = $("i-n").value.trim();
   const loc = parseLoc($("i-loc").value);
   const mfy = $("i-mfy").value.trim();
@@ -421,7 +488,7 @@ let FILTERED = [];
 function renderList(){
   const q = $("f-q").value.trim().toLowerCase(), v = id => $(id).value;
   FILTERED = Object.entries(ITEMS).filter(([id,x]) =>
-    (!q || String(x.n).toLowerCase().includes(q)) && (!v("f-pst")||x.p===v("f-pst")) && (!v("f-ub")||x.ub===v("f-ub")) &&
+    (!q || String(x.n).toLowerCase().includes(q)) && (!v("f-pst")||x.p===v("f-pst")) && (!v("f-tm")||tmOf(x)===v("f-tm")) && (!v("f-ub")||x.ub===v("f-ub")) &&
     (!v("f-mfy")||x.mfy===v("f-mfy")) && (!v("f-h")||x.h===v("f-h")) && (!v("f-b")||x.b===v("f-b"))
   ).sort((a,b)=>String(a[1].n).localeCompare(String(b[1].n), undefined, {numeric:true}));
   $("f-count").textContent = `Topildi: ${FILTERED.length} ta`;
@@ -456,14 +523,14 @@ async function openPass(id){
     const ph = (s.exists() && s.data().photos) || [];
     if (passId !== id) return;
     $("pPhotos").innerHTML = ph.length ? ph.map(p=>`<img src="${p}">`).join("") : "Rasm yo'q";
-    $("pPhotos").querySelectorAll("img").forEach(im=>im.onclick=()=>{ const w=window.open(); w.document.write(`<img src="${im.src}" style="max-width:100%">`); });
+    $("pPhotos").querySelectorAll("img").forEach(im=>im.onclick=()=>bigImg(im.src));
     $("pModal").dataset.photos = JSON.stringify(ph);
   } catch(e) { $("pPhotos").textContent = "Rasmlarni yuklab bo'lmadi: " + e.message; }
 }
 $("pClose").onclick = () => { $("pModal").classList.remove("on"); passId = null; };
 $("pModal").onclick = e => { if (e.target.id==="pModal") $("pClose").click(); };
 $("pEdit").onclick = () => {
-  const id = passId, x = ITEMS[id]; if (!x) return;
+  const id = passId, x = ITEMS[id]; if (!x || !isAdmin) return;
   resetForm(); editId = id;
   $("i-n").value = x.n; $("i-n").disabled = true;
   $("i-q").value = x.q; $("i-r").value = x.r; $("i-c").value = x.c;
@@ -473,10 +540,10 @@ $("pEdit").onclick = () => {
   try { photos = JSON.parse($("pModal").dataset.photos || "[]"); } catch { photos = []; }
   renderPhotos();
   $("formTitle").textContent = `TP ${x.n} — tahrirlash`;
-  $("pClose").click(); tab("add");
+  $("pClose").click(); $("fdClose").click(); tab("add");
 };
 $("pDel").onclick = async () => {
-  const id = passId, x = ITEMS[id]; if (!x) return;
+  const id = passId, x = ITEMS[id]; if (!x || !isAdmin) return;
   if (prompt(`TP ${x.n} butunlay o'chiriladi. Tasdiqlash uchun TP raqamini yozing:`) !== String(x.n)) return;
   try {
     const b = writeBatch(db);
@@ -486,7 +553,103 @@ $("pDel").onclick = async () => {
   } catch(e) { alert("O'chirishda xato: " + e.message); }
 };
 
-function renderAll(){ renderKPI(); renderList(); renderMap(false); }
+// ---------- TARMOQ: PST -> FIDERLAR ----------
+let curPst = null;
+const num = v => (v===""||v==null||isNaN(v)) ? null : +v;
+const fmt = v => v==null ? "—" : String(v).replace(".", ",");
+function renderPst(){
+  const a = Object.values(ITEMS);
+  $("pstGrid").innerHTML = Object.keys(PST).map(p=>{
+    const fs = TARMOQ.filter(t=>t[1]===p), tps = a.filter(x=>x.p===p);
+    const km = fs.reduce((s,t)=>s+(num(FD[fdId(t[0])]?.u)||0),0), ty = fs.reduce((s,t)=>s+(num(FD[fdId(t[0])]?.ty)||0),0);
+    return `<div class="pst${p===curPst?" on":""}" data-p="${esc(p)}"><h4>⚡ ${esc(p)}</h4><div>
+      Fiderlar: <b>${fs.length}</b><br>Kiritilgan TP: <b>${tps.length}</b>
+      <span style="white-space:nowrap">(🟢${tps.filter(x=>x.h==="yaxshi").length} 🟡${tps.filter(x=>x.h==="orta").length} 🔴${tps.filter(x=>x.h==="yomon").length})</span><br>
+      Uzunlik: <b>${km ? fmt(+km.toFixed(2))+" km" : "—"}</b> · Tayanch: <b>${ty||"—"}</b></div></div>`;
+  }).join("");
+  $("pstGrid").querySelectorAll(".pst").forEach(el=>el.onclick=()=>{ curPst = el.dataset.p; renderPst(); $("pstBox").scrollIntoView({behavior:"smooth"}); });
+  if (!curPst) return;
+  $("pstBox").classList.remove("hide");
+  $("pstTitle").textContent = `${curPst} — fiderlar`;
+  const fs = TARMOQ.filter(t=>t[1]===curPst);
+  $("pstTbl").innerHTML = `<tr><th>Fider</th><th class="n">Uzunlik, km</th><th class="n">Tayanch</th><th class="n">TP (sxema)</th><th class="n">Kiritilgan TP</th><th class="n">🟢</th><th class="n">🟡</th><th class="n">🔴</th><th>Sxema</th></tr>` +
+    fs.map(t=>{ const d = FD[fdId(t[0])]||{}, g = a.filter(x=>tmOf(x)===t[0]);
+      return `<tr class="click" data-tm="${esc(t[0])}"><td><b>${esc(t[2])}</b></td><td class="n">${fmt(num(d.u))}</td><td class="n">${d.ty??"—"}</td><td class="n">${d.ts??"—"}</td>
+        <td class="n"><b>${g.length}</b></td><td class="n">${g.filter(x=>x.h==="yaxshi").length}</td><td class="n">${g.filter(x=>x.h==="orta").length}</td><td class="n">${g.filter(x=>x.h==="yomon").length}</td><td>${d.sx?"🖼":""}</td></tr>`; }).join("");
+  $("pstTbl").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openFider(r.dataset.tm));
+}
+
+let curFd = null, fdSx = undefined; // undefined = o'zgarmagan, null = o'chirilgan, string = yangi
+async function openFider(full){
+  curFd = full; fdSx = undefined;
+  const t = TARMOQ.find(x=>x[0]===full), d = FD[fdId(full)]||{}, g = Object.entries(ITEMS).filter(([id,x])=>tmOf(x)===full)
+    .sort((a,b)=>String(a[1].n).localeCompare(String(b[1].n),undefined,{numeric:true}));
+  $("fdTitle").textContent = `Fider: ${t[2]}`;
+  $("fdView").innerHTML = `<div class="badge">${esc(t[1])}</div>
+    <table class="pass" style="margin-top:8px">
+      <tr><td>Tarmoq</td><td>${esc(full)}</td></tr>
+      <tr><td>Uzunligi</td><td>${d.u!=null&&d.u!==""?fmt(d.u)+" km":"—"}</td></tr>
+      <tr><td>Tayanchlar soni</td><td>${d.ty??"—"}</td></tr>
+      <tr><td>TP soni (sxema bo'yicha)</td><td>${d.ts??"—"}</td></tr>
+      <tr><td>Kiritilgan TP</td><td><b>${g.length}</b> (🟢${g.filter(([,x])=>x.h==="yaxshi").length} 🟡${g.filter(([,x])=>x.h==="orta").length} 🔴${g.filter(([,x])=>x.h==="yomon").length})</td></tr>
+      ${d.iz?`<tr><td>Izoh</td><td>${esc(d.iz)}</td></tr>`:""}
+    </table>
+    <h4 style="margin:14px 0 6px">Sxema</h4><div class="sxema" id="fdSxView">${d.sx?"Yuklanmoqda…":"<span style='color:var(--mut)'>Sxema yuklanmagan</span>"}</div>
+    <h4 style="margin:14px 0 6px">Shu fiderdagi TP lar</h4>
+    ${g.length?`<table>${g.map(([id,x])=>`<tr class="click" data-id="${esc(id)}"><td><i class="dot h-${x.h}"></i><b>TP ${esc(x.n)}</b></td><td>${x.q} kVA · ${esc(x.r)}</td><td>${esc(x.mfy)}</td></tr>`).join("")}</table>`:"<span style='color:var(--mut)'>Hali TP kiritilmagan</span>"}
+    <br><button class="btn sec adm" id="fdEdit" style="width:100%">✏️ Fider ma'lumotlarini kiritish / o'zgartirish</button>`;
+  $("fdView").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openPass(r.dataset.id));
+  const eb = $("fdEdit"); if (eb) eb.onclick = fdEditMode;
+  $("fdView").classList.remove("hide"); $("fdForm").classList.add("hide");
+  $("fdModal").classList.add("on");
+  if (d.sx) {
+    try { const s = await getDoc(doc(db,"sxema",fdId(full)));
+      if (curFd!==full) return;
+      const img = s.exists() && s.data().img;
+      $("fdSxView").innerHTML = img ? `<img src="${img}">` : "Sxema topilmadi";
+      const im = $("fdSxView").querySelector("img"); if (im) im.onclick = () => bigImg(im.src);
+    } catch(e){ $("fdSxView").textContent = "Sxemani yuklab bo'lmadi: " + e.message; }
+  }
+}
+function bigImg(src){ const w = window.open(); w.document.write(`<body style="margin:0;background:#111"><img src="${src}" style="max-width:100%;display:block;margin:auto"></body>`); }
+function fdEditMode(){
+  const d = FD[fdId(curFd)]||{};
+  $("fd-u").value = d.u!=null ? String(d.u).replace(".",",") : ""; $("fd-ty").value = d.ty??""; $("fd-ts").value = d.ts??""; $("fd-iz").value = d.iz||"";
+  const cur = $("fdSxView") && $("fdSxView").querySelector("img");
+  $("fdSxPrev").innerHTML = cur ? `<img src="${cur.src}">` : ""; fdSx = undefined;
+  $("fdMsg").innerHTML = ""; $("fdView").classList.add("hide"); $("fdForm").classList.remove("hide");
+}
+$("fdSxBtn").onclick = () => $("fdSxFile").click();
+$("fdSxFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { fdSx = await compress(f, 1800, SXEMA_BYTES); $("fdSxPrev").innerHTML = `<img src="${fdSx}">`; }
+  catch { alert("Rasmni o'qib bo'lmadi"); }
+};
+$("fdSxDel").onclick = () => { fdSx = null; $("fdSxPrev").innerHTML = "<span style='color:var(--mut)'>Sxema olib tashlanadi</span>"; };
+$("fdCancel").onclick = () => openFider(curFd);
+$("fdSave").onclick = async () => {
+  if (!isAdmin) return;
+  const id = fdId(curFd), old = FD[id]||{};
+  const u = $("fd-u").value.trim().replace(",", "."), ty = $("fd-ty").value.trim(), ts = $("fd-ts").value.trim();
+  if ((u && isNaN(u)) || (ty && !/^\d+$/.test(ty)) || (ts && !/^\d+$/.test(ts)))
+    return $("fdMsg").innerHTML = `<div class="msg err">Uzunlik — son (masalan 12,5), tayanch va TP soni — butun son bo'lsin</div>`;
+  const rec = { u: u===""?null:+u, ty: ty===""?null:+ty, ts: ts===""?null:+ts, iz: $("fd-iz").value.trim(),
+                sx: fdSx===undefined ? !!old.sx : !!fdSx, by: auth.currentUser.email, t: Date.now() };
+  $("fdSave").disabled = true;
+  try {
+    const b = writeBatch(db);
+    b.set(fdRef, {items:{[id]:rec}}, {merge:true});
+    if (fdSx) b.set(doc(db,"sxema",id), {img: fdSx});
+    if (fdSx === null) b.delete(doc(db,"sxema",id));
+    await b.commit();
+    FD[id] = rec; openFider(curFd);
+  } catch(e){ $("fdMsg").innerHTML = `<div class="msg err">Saqlashda xato: ${esc(e.message)}</div>`; }
+  $("fdSave").disabled = false;
+};
+$("fdClose").onclick = () => { $("fdModal").classList.remove("on"); curFd = null; };
+$("fdModal").onclick = e => { if (e.target.id==="fdModal") $("fdClose").click(); };
+
+function renderAll(){ renderKPI(); renderPst(); renderList(); renderMap(false); }
 renderPhotos();
 </script>
 </body>
