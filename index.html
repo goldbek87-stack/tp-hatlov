@@ -110,7 +110,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
     <div class="kpi"><span>Jami quvvat, kVA</span><b id="k-kva">0</b></div>
     <div class="kpi"><span>Jami iste'molchi (0,4 kV)</span><b id="k-ch">0</b></div>
   </div>
-  <div style="font-size:13px;color:var(--mut);margin-top:6px">👆 Kartochkani bossangiz, o'sha TP lar ro'yxati ochiladi</div>
+  <div style="font-size:13px;color:var(--mut);margin-top:6px">👆 Kartochka yoki jadval qatorini bossangiz, o'sha TP lar ro'yxati ochiladi</div>
   <div class="card" style="margin-top:12px"><h3 style="margin-top:0">UB bo'yicha</h3><table id="k-ub"></table></div>
   <div class="card"><h3 style="margin-top:0">Podstansiya bo'yicha</h3><table id="k-pst"></table></div>
 </section>
@@ -525,9 +525,17 @@ function renderKPI(){
   $("k-kva").textContent = a.reduce((s,x)=>s+(x.q||0),0).toLocaleString("ru");
   $("k-ch").textContent = a.reduce((s,x)=>s+chSum(x),0).toLocaleString("ru");
   const grp = (keys, key, label) => `<tr><th>${label}</th><th class="n">Jami</th><th class="n">🟢</th><th class="n">🟡</th><th class="n">🔴</th></tr>` +
-    keys.map(([k,t])=>{ const g=a.filter(x=>x[key]===k); return `<tr><td>${esc(t)}</td><td class="n"><b>${g.length}</b></td><td class="n">${g.filter(x=>eh(x)==="yaxshi").length}</td><td class="n">${g.filter(x=>eh(x)==="orta").length}</td><td class="n">${g.filter(x=>eh(x)==="yomon").length}</td></tr>`; }).join("");
+    keys.map(([k,t])=>{ const g=a.filter(x=>x[key]===k); return `<tr class="click" data-key="${key}" data-val="${esc(k)}"><td>${esc(t)} ›</td><td class="n" data-h=""><b>${g.length}</b></td><td class="n" data-h="yaxshi">${g.filter(x=>eh(x)==="yaxshi").length}</td><td class="n" data-h="orta">${g.filter(x=>eh(x)==="orta").length}</td><td class="n" data-h="yomon">${g.filter(x=>eh(x)==="yomon").length}</td></tr>`; }).join("");
   $("k-ub").innerHTML = grp(UB.map(u=>[u.ub,`${u.ub} — ${u.m}`]), "ub", "UB / master");
   $("k-pst").innerHTML = grp(Object.keys(PST).map(p=>[p,p]), "p", "Podstansiya");
+  // Qatorni bosganda — o'sha UB/PST ning TP lari; rangli sonni bosganda — faqat o'sha holatdagilar
+  document.querySelectorAll("#k-ub tr.click, #k-pst tr.click").forEach(r=>r.onclick=e=>{
+    const td = e.target.closest("td"), hv = td && td.dataset.h || "";
+    ["f-q","f-pst","f-tm","f-ub","f-mfy","f-h","f-b"].forEach(id=>$(id).value="");
+    $(r.dataset.key==="ub" ? "f-ub" : "f-pst").value = r.dataset.val;
+    $("f-h").value = hv;
+    renderList(); tab("list");
+  });
 }
 
 // ---------- XARITA ----------
@@ -563,9 +571,12 @@ function renderList(){
   const FIDS = ["f-q","f-pst","f-tm","f-ub","f-mfy","f-h","f-b"], act = FIDS.filter(id=>$(id).value);
   FIDS.forEach(id=>$(id).classList.toggle("act", !!$(id).value));
   $("fClear").classList.toggle("hide", !act.length);
-  $("f-count").innerHTML = act.length
-    ? `Topildi: <b>${FILTERED.length}</b> ta <span style="color:var(--bad)">(filtr bilan · jami ${Object.keys(ITEMS).length} ta)</span>`
-    : `Jami: <b>${FILTERED.length}</b> ta`;
+  const fc = v => FILTERED.filter(([,x])=>eh(x)===v).length;
+  const brk = ` &nbsp;🟢 <b>${fc("yaxshi")}</b> &nbsp;🟡 <b>${fc("orta")}</b> &nbsp;🔴 <b>${fc("yomon")}</b>`;
+  const ubSel = UB.find(u=>u.ub===$("f-ub").value);
+  $("f-count").innerHTML = (ubSel ? `<b>${esc(ubSel.ub)} — ${esc(ubSel.m)}</b><br>` : "") + (act.length
+    ? `Topildi: <b>${FILTERED.length}</b> ta${brk} <span style="color:var(--bad)">(filtr bilan · jami ${Object.keys(ITEMS).length} ta)</span>`
+    : `Jami: <b>${FILTERED.length}</b> ta${brk}`);
   $("listTbl").innerHTML = `<tr><th>TP</th><th class="n">kVA</th><th>Rusum</th><th>Tarmoq</th><th>UB</th><th>MFY</th><th>Holat</th></tr>` +
     FILTERED.map(([id,x])=>`<tr class="click" data-id="${esc(id)}"><td><b>${esc(x.n)}</b></td><td class="n">${x.q}</td><td>${esc(x.r)}</td><td>${esc(x.p.split(" (")[0])} / ${esc(x.f)}</td><td>${esc(x.ub)}</td><td>${esc(x.mfy)}</td><td><i class="dot h-${eh(x)}"></i>${hT(eh(x))}${x.xs?` <span class="badge">🛠${x.xs}</span>`:""}</td></tr>`).join("");
   $("listTbl").querySelectorAll("tr.click").forEach(r=>r.onclick=()=>openPass(r.dataset.id));
