@@ -227,7 +227,7 @@ input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:
   <h4 style="margin:16px 0 4px">🛠 Xizmatlar daftari <span id="xzCount" class="badge"></span></h4>
   <div id="xzState" style="font-size:13px;margin-bottom:6px"></div>
   <div class="adm" id="xzForm" style="background:#f6f8fb;border-radius:8px;padding:10px;margin-bottom:8px">
-    <div class="row"><input id="xz-d" type="date"><label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--ink)"><input type="checkbox" id="xz-alm" style="width:auto"> TP almashtirildi</label></div>
+    <div class="row"><input id="xz-d" type="date"><label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--ink)"><input type="checkbox" id="xz-alm" style="width:auto"> To'la ta'mirlandi</label></div>
     <input id="xz-t" placeholder="Qanday xizmat ko'rsatildi? (masalan: saqlagich almashtirildi)" style="margin-top:6px">
     <button class="btn" id="xzAdd" style="margin-top:6px;width:100%">➕ Xizmatni qo'shish</button>
   </div>
@@ -583,7 +583,7 @@ function renderList(){
 }
 $("xlsBtn").onclick = async () => {
   const rows = FILTERED.map(([id,x],i)=>({"№":i+1,"TP raqami":x.n,"Quvvati, kVA":x.q,"Rusumi":x.r,"0,4 kV chiqishlar":x.c,"Iste'molchilar (chiqishlar bo'yicha)":(x.ch||[]).map((v,i)=>`${i+1}:${v??"-"}`).join("; "),"Jami iste'molchi":chSum(x),
-    "Tarmoq":x.tm||`${x.p} ${x.f}`,"Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(eh(x)),"Master bahosi":hT(x.h),"Xizmatlar soni":x.xs||0,"Almashtirilgan":x.alm?"ha":"","Balans":bT(x.b),
+    "Tarmoq":x.tm||`${x.p} ${x.f}`,"Podstansiya":x.p,"Fider":x.f,"UB":x.ub,"Master":x.m,"MFY":x.mfy,"Holati":hT(eh(x)),"Master bahosi":hT(x.h),"Xizmatlar soni":x.xs||0,"To'la ta'mirlangan":x.alm?"ha":"","Balans":bT(x.b),
     "Kenglik":x.lat,"Uzunlik":x.lng,"Rasmlar soni":x.pc,"Kiritgan":x.cby||x.by,"Oxirgi o'zgartirish":new Date(x.t).toLocaleString("ru")}));
   const ws = XLSX.utils.json_to_sheet(rows), wb = XLSX.utils.book_new();
   ws["!cols"] = [5,10,8,8,8,30,10,40,26,20,7,18,18,9,9,8,8,12,11,11,8,24,18].map(w=>({wch:w}));
@@ -608,7 +608,7 @@ async function openPass(id, keep){
   const x = ITEMS[id]; if (!x) return; passId = id;
   $("pTitle").innerHTML = `<i class="dot h-${eh(x)}"></i>TP ${esc(x.n)}`;
   const chTxt = (x.ch||[]).some(v=>v!=null) ? `${x.c} ta — ` + x.ch.map((v,i)=>`${i+1}: ${v??"—"}`).join(", ") + ` · <b>jami ${chSum(x)}</b>` : `${x.c} ta`;
-  const hTxt = eh(x)!==x.h ? `${hT(eh(x))} <small>(avtomatik: ${x.xs>XIZ_LIMIT?`${x.xs} ta xizmat`:"almashtirilgan"}; master bahosi: ${hT(x.h)})</small>` : hT(x.h);
+  const hTxt = eh(x)!==x.h ? `${hT(eh(x))} <small>(avtomatik: ${x.xs>XIZ_LIMIT?`${x.xs} ta xizmat`:"to'la ta'mirlangan"}; master bahosi: ${hT(x.h)})</small>` : hT(x.h);
   const rows = [["Quvvati",x.q+" kVA"],["Rusumi",x.r],["0,4 kV chiqishlar",{html:chTxt}],["Tarmoq",x.tm||`${x.p} ${x.f}`],
     ["Mas'ul brigada",`${x.ub} — ${x.m}`],["MFY",x.mfy],["Holati",{html:hTxt}],["Balans",bT(x.b)],
     ["Lokatsiya",`<a target="_blank" href="https://maps.google.com/?q=${x.lat},${x.lng}">${x.lat}, ${x.lng}</a>`],
@@ -677,11 +677,11 @@ function renderXiz(){
   const st = xzStats(XZ);
   $("xzCount").textContent = XZ.length ? `${XZ.length} ta yozuv` : "";
   $("xzState").innerHTML = st.xs > XIZ_LIMIT
-    ? `<span style="color:var(--bad)">🔴 ${st.alm?"Almashtirilgandan keyin ":""}${st.xs} marta xizmat — avtomatik "Yomon"</span>`
-    : st.alm ? `<span style="color:var(--ok)">🟢 TP almashtirilgan — avtomatik "Yaxshi"${st.xs?` (keyin ${st.xs} ta xizmat)`:""}</span>`
+    ? `<span style="color:var(--bad)">🔴 ${st.alm?"To'la ta'mirdan keyin ":""}${st.xs} marta xizmat — avtomatik "Yomon"</span>`
+    : st.alm ? `<span style="color:var(--ok)">🟢 TP to'la ta'mirlangan — avtomatik "Yaxshi"${st.xs?` (keyin ${st.xs} ta xizmat)`:""}</span>`
     : XZ.length ? `<span style="color:var(--mut)">${st.xs} ta xizmat. ${XIZ_LIMIT} tadan oshsa, TP qizilga o'tadi.</span>` : "";
   $("xzList").innerHTML = XZ.length ? XZ.map((e,i)=>({e,i})).reverse().map(({e,i})=>`<div class="xz${e.alm?" alm":""}">
-      <b>${esc(e.d.split("-").reverse().join("."))}</b> ${e.alm?"♻️ <b>TP almashtirildi</b>"+(e.t?" · ":""):""}${esc(e.t)}
+      <b>${esc(e.d.split("-").reverse().join("."))}</b> ${e.alm?"♻️ <b>To'la ta'mirlandi</b>"+(e.t?" · ":""):""}${esc(e.t)}
       <br><small>${esc(e.by||"")}</small> <button class="btn del adm" data-i="${i}" style="padding:2px 8px;font-size:12px;float:right">✕</button></div>`).join("")
     : "<span style='color:var(--mut)'>Hali xizmat yozilmagan</span>";
   $("xzList").querySelectorAll("button[data-i]").forEach(b=>b.onclick=()=>{
